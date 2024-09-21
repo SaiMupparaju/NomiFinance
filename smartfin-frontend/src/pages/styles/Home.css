@@ -1,0 +1,72 @@
+/* Home.css */
+
+.home-container {
+    padding: 20px;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .rule-cards {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* Centers the rule cards */
+}
+
+.rule-card {
+  margin: 20px;
+  flex-grow: 1;
+  /* Default card size for small layout */
+  max-width: 350px;
+  width: 100%;
+}
+
+/* Small layout */
+.rule-cards.small .rule-card {
+  max-width: 350px; /* Max width for small cards */
+}
+
+/* Medium layout */
+.rule-cards.medium .rule-card {
+  max-width: 600px; /* Max width for medium cards */
+}
+
+/* Large layout */
+.rule-cards.large .rule-card {
+  max-width: 1000px; /* Max width for large cards */
+  width: 100%; /* Ensure full width for large layout */
+}
+  
+  .navbar {
+    margin-bottom: 20px;
+    width: 100%;
+  }
+  
+  .navbar-brand {
+    font-size: 1.5rem;
+  }
+  
+  .navbar-nav .nav-link {
+    display: flex;
+    align-items: center;
+    font-size: 1.2rem;
+  }
+  
+  .navbar-nav .nav-link svg {
+    margin-right: 5px;
+  }
+  
+  .btn {
+    display: flex;
+    align-items: center;
+  }
+  
+  .btn svg {
+    margin-right: 5px;
+  }
+  
+  .rule-cards {
+    width: 100%;
+  }
+  

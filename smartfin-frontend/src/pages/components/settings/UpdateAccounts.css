@@ -1,0 +1,23 @@
+/* styles/UpdateAccounts.css */
+
+.update-accounts {
+    padding: 20px;
+  }
+  
+  .update-accounts h5 {
+    font-weight: bold;
+  }
+  
+  .update-accounts .accordion-button {
+    font-size: 1.1rem;
+  }
+  
+  .update-accounts .list-group-item {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .update-accounts .list-group-item strong {
+    color: #007bff;
+  }
+  

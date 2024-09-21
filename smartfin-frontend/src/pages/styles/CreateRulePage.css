@@ -1,0 +1,45 @@
+.create-rule-container {
+  margin-top: 20px;
+}
+
+.if-section {
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  position: relative;
+}
+
+.if-button {
+  margin-right: 10px;
+}
+
+.if-conditions {
+  margin-top: 20px;
+}
+
+.if-condition {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.if-condition > * {
+  margin-right: 10px;
+  flex-grow: 1;
+}
+
+.add-condition-button {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+}
+
+.execute-section,
+.go-section {
+  border: 1px solid #ddd;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+}

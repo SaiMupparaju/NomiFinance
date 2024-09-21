@@ -1,0 +1,28 @@
+.profile-settings {
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+  }
+  
+  .icon {
+    font-size: 24px;
+    color: #6c757d;
+  }
+  
+  .card-body .d-flex {
+    padding: 10px 0;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .card-body .d-flex:last-child {
+    border-bottom: none;
+  }
+  
+  .btn-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem;
+    font-size: 16px;
+  }
+  

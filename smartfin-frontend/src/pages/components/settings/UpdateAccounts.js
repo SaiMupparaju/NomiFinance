@@ -1,0 +1,157 @@
+import React, { useState } from 'react';
+import { Button, Accordion, ListGroup } from 'react-bootstrap';
+import { usePlaidLink } from 'react-plaid-link';
+import { FaSyncAlt, FaExclamationTriangle } from 'react-icons/fa';
+import { useAuth } from '../../../contexts/AuthContext';
+import axiosInstance from '../../../utils/axiosInstance'; // Use axios for authenticated requests
+
+const PlaidLinkUpdate = ({ linkToken, onSuccess, onExit }) => {
+  const config = {
+    token: linkToken,
+    onSuccess,
+    onExit,
+  };
+
+  const { open, ready } = usePlaidLink(config);
+
+  return ready ? open() : null; // Automatically open the Plaid Link when ready
+};
+
+const UpdateAccounts = ({ bankAccounts }) => {
+  const { auth } = useAuth(); // Get the current user's info
+  const [linkTokens, setLinkTokens] = useState({}); // Mapping of bankName to { linkToken, fetchedAt }
+  const [currentBank, setCurrentBank] = useState(null);
+  const [newAccountLinkToken, setNewAccountLinkToken] = useState(null); // For new account link token
+
+  const handleUpdateAccount = async (bankName) => {
+    const tokenInfo = linkTokens[bankName];
+    const now = Date.now();
+    const TOKEN_EXPIRATION_TIME = 3.5 * 60 * 60 * 1000; // 3.5 hours in milliseconds
+
+    // Check if token is valid or fetch a new one if expired
+    if (tokenInfo && now - tokenInfo.fetchedAt < TOKEN_EXPIRATION_TIME) {
+      setCurrentBank(bankName);
+    } else {
+      try {
+        const response = await axiosInstance.post('plaid/create_update_link_token', {
+          userId: auth.user.id,
+          bankName,
+        });
+
+        const { link_token } = response.data;
+        if (link_token) {
+          setLinkTokens((prevTokens) => ({
+            ...prevTokens,
+            [bankName]: {
+              linkToken: link_token,
+              fetchedAt: now,
+            },
+          }));
+          setCurrentBank(bankName);
+        } else {
+          alert('Failed to create link token.');
+        }
+      } catch (error) {
+        console.error('Error updating account:', error);
+        alert('An error occurred while updating the account.');
+      }
+    }
+  };
+
+  const handleOnSuccess = (public_token, metadata) => {
+    console.log('Plaid Link success:', metadata);
+    // Optionally handle public_token exchange or refresh account list
+    setCurrentBank(null);
+  };
+
+  const handleOnExit = (err, metadata) => {
+    if (err) {
+      console.error('Plaid Link error:', err);
+    }
+    console.log('Plaid Link exit:', metadata);
+    setCurrentBank(null);
+  };
+
+  const handleAddNewAccount = async () => {
+    try {
+      const response = await axiosInstance.post('plaid/get-link-token', {
+        userId: auth.user.id,
+      });
+
+      const { link_token } = response.data;
+      if (link_token) {
+        setNewAccountLinkToken(link_token); // Set token for new account linking
+      } else {
+        alert('Failed to create link token.');
+      }
+    } catch (error) {
+      console.error('Error fetching new account link token:', error);
+      alert('An error occurred while fetching the link token.');
+    }
+  };
+
+  return (
+    <div className="update-accounts">
+      <h5 className="mb-3">Your Connected Bank Accounts</h5>
+
+      <Accordion>
+        {bankAccounts &&
+          Object.keys(bankAccounts).map((bankName, idx) => (
+            <Accordion.Item eventKey={idx.toString()} key={bankName}>
+              <Accordion.Header className="d-flex align-items-center justify-content-between">
+                <span className="bank-name">{bankName}</span>
+                <div className="d-flex align-items-center">
+                  <Button
+                    variant="link"
+                    className="update-button"
+                    onClick={() => handleUpdateAccount(bankName)}
+                  >
+                    <FaSyncAlt />
+                  </Button>
+                  {/* Display hazard icon if the bank needs an update */}
+                  {bankAccounts[bankName].some(account => account.needsUpdate) && (
+                    <FaExclamationTriangle className="text-warning ms-2" />
+                  )}
+                </div>
+              </Accordion.Header>
+              <Accordion.Body>
+                <ListGroup variant="flush">
+                  {bankAccounts[bankName].map((account) => (
+                    <ListGroup.Item key={account.accountId}>
+                      <strong>{account.accountName}</strong> - {account.type}
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              </Accordion.Body>
+            </Accordion.Item>
+          ))}
+      </Accordion>
+
+      <Button variant="primary" onClick={handleAddNewAccount}>
+          ADD NEW ITEM
+      </Button>
+
+
+      {/* Render Plaid Link for adding a new account */}
+      {newAccountLinkToken && (
+        <PlaidLinkUpdate
+          linkToken={newAccountLinkToken}
+          onSuccess={handleOnSuccess}
+          onExit={handleOnExit}
+        />
+      )}
+
+      {currentBank && linkTokens[currentBank] && (
+        <PlaidLinkUpdate
+          linkToken={linkTokens[currentBank].linkToken}
+          onSuccess={handleOnSuccess}
+          onExit={handleOnExit}
+        />
+      )}
+
+
+    </div>
+  );
+};
+
+export default UpdateAccounts;
