@@ -1,0 +1,24 @@
+{
+  "name": "tasker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "agenda": "^5.0.0",
+    "axios": "^1.7.5",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "json-rules-engine": "^6.5.0",
+    "mailgun.js": "^10.2.3",
+    "mongoose": "^8.5.3",
+    "nodemailer": "^6.9.14",
+    "rules-engine": "^0.3.0",
+    "telnyx": "^1.26.2"
+  }
+}
