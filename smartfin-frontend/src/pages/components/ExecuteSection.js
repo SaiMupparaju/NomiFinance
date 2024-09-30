@@ -2,17 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { Form, Row, Col, Button, Card } from 'react-bootstrap';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { tz } from 'moment-timezone'; // Import moment-timezone for timezone handling
+
+// Example of time zones you can provide as options
+const timeZoneOptions = [
+  { label: 'Eastern Time (EST)', value: 'America/New_York' },
+  { label: 'Central Time (CST)', value: 'America/Chicago' },
+  { label: 'Pacific Time (PST)', value: 'America/Los_Angeles' },
+  { label: 'UTC', value: 'UTC' },
+  // Add more time zones as necessary
+];
 
 function parseDate(dateString) {
   const date = dateString instanceof Date ? dateString : new Date(dateString);
-  //console.log(`Parsing date: Input - ${dateString}, Output - ${date}`, date instanceof Date);
   return date;
 }
 
-
-function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
+function ExecuteSection({ schedule = {}, setSchedule, isNewRule }) {
   console.log("/execute-section", schedule);
-
 
   const daysOfWeek = [
     { label: 'Sunday', value: 0 },
@@ -23,17 +30,22 @@ function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
     { label: 'Friday', value: 5 },
     { label: 'Saturday', value: 6 },
   ];
-  
 
   const [frequency, setFrequency] = useState(schedule.frequency || '');
   const [selectedDate, setSelectedDate] = useState(parseDate(schedule.date || new Date()));
-  
+  const [timeZone, setTimeZone] = useState(schedule.timeZone || 'UTC'); // Add timezone state
+
   const [dailyTimes, setDailyTimes] = useState(
     schedule.dailyTimes ? schedule.dailyTimes.map(timeObj => ({
       ...timeObj,
       time: parseDate(timeObj.time)
     })) : []
   );
+
+  useEffect(() => {
+    const userLocalTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setSchedule((prevSchedule) => ({ ...prevSchedule, userLocalTimeZone }));
+  }, [setSchedule]);
 
   const [weeklyTimes, setWeeklyTimes] = useState(
     schedule.weeklyTimes ? schedule.weeklyTimes.map(timeObj => ({
@@ -50,15 +62,14 @@ function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
     })) : [{ date: new Date(), time: new Date() }]
   );
 
-
   useEffect(() => {
     if (dailyTimes && dailyTimes.length > 0) {
-        const needsUpdate = dailyTimes.some(time => !(time instanceof Date));
-        
-        if (needsUpdate) {
-            const updatedDailyTimes = dailyTimes.map(time => time instanceof Date ? time : new Date(time));
-            setDailyTimes(updatedDailyTimes);
-        }
+      const needsUpdate = dailyTimes.some(time => !(time instanceof Date));
+
+      if (needsUpdate) {
+        const updatedDailyTimes = dailyTimes.map(time => time instanceof Date ? time : new Date(time));
+        setDailyTimes(updatedDailyTimes);
+      }
     }
     console.log("daily times:", dailyTimes, dailyTimes[0] instanceof Date);
   }, [dailyTimes]);
@@ -67,15 +78,12 @@ function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
     console.log("weekly times:", weeklyTimes);
   }, [weeklyTimes]);
 
-
   useEffect(() => {
     // Update internal state to reflect changes in the schedule prop
-    
     console.log("freq useEffect", frequency);
     setFrequency(schedule.frequency || 'daily');
     setSelectedDate(parseDate(schedule.date) || new Date());
     const parsedDailyTimes = schedule.dailyTimes ? schedule.dailyTimes.map(parseDate) : [new Date()];
-    console.log(parsedDailyTimes, parsedDailyTimes[0] instanceof Date);
     setDailyTimes(parsedDailyTimes);
     setWeeklyTimes(schedule.weeklyTimes ? schedule.weeklyTimes.map(timeObj => ({
       ...timeObj,
@@ -87,13 +95,14 @@ function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
       time: parseDate(timeObj.time)
     })) : [{ date: new Date(), time: new Date() }]);
 
+    // Set the time zone if available in the schedule
+    setTimeZone(schedule.timeZone || 'UTC');
   }, [schedule, frequency]);
-
 
   const resetPreviousFrequencyValues = () => {
     setSchedule((prevSchedule) => ({
       ...prevSchedule,
-      date:null,
+      date: null,
       dailyTimes: null,
       weeklyTimes: null,
       monthlyOptions: null,
@@ -104,8 +113,7 @@ function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
   const handleFrequencyChange = (e) => {
     const newFrequency = e.target.value;
     resetPreviousFrequencyValues();
-    if (newFrequency === "once"){
-      console.log("hare");
+    if (newFrequency === "once") {
       setSelectedDate(new Date());
     }
     setFrequency(newFrequency);
@@ -115,6 +123,12 @@ function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
   const handleDateChange = (date) => {
     setSelectedDate(date);
     setSchedule((prevSchedule) => ({ ...prevSchedule, date }));
+  };
+
+  const handleTimeZoneChange = (e) => {
+    const selectedTimeZone = e.target.value;
+    setTimeZone(selectedTimeZone);
+    setSchedule((prevSchedule) => ({ ...prevSchedule, timeZone: selectedTimeZone }));
   };
 
   const handleDailyTimeChange = (index, time) => {
@@ -149,13 +163,12 @@ function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
 
   const handleWeeklyTimeChange = (index, key, value) => {
     const updatedWeeklyTimes = weeklyTimes.map((timeObj, i) =>
-        i === index ? { ...timeObj, [key]: value } : timeObj
+      i === index ? { ...timeObj, [key]: value } : timeObj
     );
     setWeeklyTimes(updatedWeeklyTimes);
     setSchedule((prevSchedule) => ({ ...prevSchedule, weeklyTimes: updatedWeeklyTimes }));
   };
 
-  
   const handleMonthlyChange = (option, checked) => {
     const updatedOptions = { ...monthlyOptions, [option]: checked };
     setMonthlyOptions(updatedOptions);
@@ -192,11 +205,10 @@ function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
 
   useEffect(() => {
     if (isNewRule) {
-      // Trigger the frequency change on the first render if it's a new rule
       handleFrequencyChange({ target: { value: 'daily' } });
       handleAddDailyTime();
     }
-  }, [isNewRule]); // Empty array ensures it runs only on the first render
+  }, [isNewRule]);
 
   return (
     <Card className="p-3 mb-3 bg-white border rounded">
@@ -211,19 +223,31 @@ function ExecuteSection({ schedule = {}, setSchedule , isNewRule }) {
         </Form.Control>
       </Form.Group>
 
+      <Form.Group controlId="timeZone" className="mt-3">
+        <Form.Label>What timezone are you in?</Form.Label>
+        <Form.Control as="select" value={timeZone} onChange={handleTimeZoneChange}>
+          {timeZoneOptions.map((tzOption) => (
+            <option key={tzOption.value} value={tzOption.value}>
+              {tzOption.label}
+            </option>
+          ))}
+        </Form.Control>
+      </Form.Group>
+
       {frequency === 'once' && (
         <Form.Group controlId="executeDate" className="mt-3">
           <Form.Label>Select Date and Time:</Form.Label>
           <DatePicker
             selected={selectedDate}
             onChange={handleDateChange}
-            showTimeSelect={true}
+            showTimeSelect
             timeIntervals={10}
             timeCaption="Time"
             dateFormat="MMMM d, yyyy h:mm aa"
           />
         </Form.Group>
       )}
+
       {frequency === 'daily' && (
         <Form.Group controlId="executeTime" className="mt-3">
           <Form.Label>Select Times:</Form.Label>

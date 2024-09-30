@@ -17,7 +17,13 @@ const BankAccountSchema = new mongoose.Schema({
   accessToken: { type: String, required: true }, // Plaid access token
   userToken: { type: String, required: true }, // User token associated with the account
   transactions: { type: Array, default: [] }, // Store transaction data
+  lastUpdated: { type: Date, default: Date.now },
 }, { timestamps: true });
+
+BankAccountSchema.pre('save', function (next) {
+  this.lastUpdated = Date.now();  // Update lastUpdated before saving
+  next();
+});
 
 const BankAccount = mongoose.model('BankAccount', BankAccountSchema);
 

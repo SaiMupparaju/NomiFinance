@@ -77,6 +77,20 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const deleteUserConfirm = async () => {
+        try {
+            const userId = auth?.user?.id;  // Assuming 'auth.user.id' holds the current user's ID
+            if (!userId) {
+                throw new Error('User ID not available');
+            }
+            await axiosInstance.delete(`/users/${userId}`);  // This will call your deleteUser route in the backend
+            logout();  // Optionally log out the user after deletion
+        } catch (error) {
+            console.error("Failed to delete user:", error);
+            throw new Error('Failed to delete user');
+        }
+    };
+
     const exchangePublicToken = async (publicToken) => {
         try {
             const data = await apiExchangePublicToken(publicToken);
@@ -96,7 +110,7 @@ export const AuthProvider = ({ children }) => {
 
 
     return (
-        <AuthContext.Provider value={{ auth, login, register, logout, getLinkToken, linkToken, exchangePublicToken }}>
+        <AuthContext.Provider value={{ auth, login, register, logout, getLinkToken, linkToken, exchangePublicToken, resendVerificationEmail, deleteUserConfirm }}>
             {children}
         </AuthContext.Provider>
     );

@@ -4,7 +4,6 @@ import { Modal, Tab, Nav, Row, Col, Button } from 'react-bootstrap';
 // Import individual components for each tab
 import UpdateAccounts from './settings/UpdateAccounts';
 import ProfileSettings from './settings/ProfileSettings';
-import PhoneContacts from './settings/PhoneContacts';
 import PaymentInfo from './settings/PaymentInfo';
 
 function SettingsModal({ show, handleClose, bankAccounts }) {
@@ -38,9 +37,6 @@ function SettingsModal({ show, handleClose, bankAccounts }) {
                                 </Tab.Pane>
                                 <Tab.Pane eventKey="profile-settings">
                                     <ProfileSettings />
-                                </Tab.Pane>
-                                <Tab.Pane eventKey="phone-contacts">
-                                    <PhoneContacts />
                                 </Tab.Pane>
                                 <Tab.Pane eventKey="payment-info">
                                     <PaymentInfo />

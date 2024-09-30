@@ -16,21 +16,21 @@ function IfSection({
 
 
   const operatorMapping = {
-    greaterThanInclusive: '>=',
-    lessThanInclusive: '<=',
-    equal: '==',
-    notEqual: '!=',
-    greaterThan: '>',
-    lessThan: '<',
+    greaterThanInclusive: '>= Greater Than or Equal To',
+    lessThanInclusive: '<= Less Than or Equal To',
+    equal: '== Equal',
+    notEqual: '!= Not Equal',
+    greaterThan: '> Greater Than',
+    lessThan: '< Less Than',
   };
 
   const operatorReverseMapping = {
-    '>=': 'greaterThanInclusive',
-    '<=': 'lessThanInclusive',
-    '==': 'equal',
-    '!=': 'notEqual',
-    '>': 'greaterThan',
-    '<': 'lessThan',
+    '>= Greater Than or Equal To': 'greaterThanInclusive',
+    '<= Less Than or Equal To': 'lessThanInclusive',
+    '== Equal': 'equal',
+    '!= Not Equal': 'notEqual',
+    '> Greater Than': 'greaterThan',
+    '< Less Than': 'lessThan',
   };
 
   const conditionsArray = section[section.ifOP || 'all'];

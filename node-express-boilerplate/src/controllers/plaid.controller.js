@@ -1,13 +1,14 @@
 const { PlaidApi, PlaidEnvironments, Configuration, AccountsGetRequest } = require('plaid');
 const User = require('../models/user.model'); // Update the path according to your project structure
 const BankAccount = require('../models/bankAccount.model');
+const UserAccountsSummary = require('../models/userAccountSummary.model');
 const LinkToken = require('../models/linkToken.model');
 const { getBankNameByAccessToken } = require('../services/BankAccountService');
 
-const PLAID_CLIENT_ID = "6674c87c3a3e2b001a826a0b";
-const PLAID_SECRET = "137a6b2a2ac6bcb3906d29a4920892";
+const PLAID_CLIENT_ID = "66ef2c652ac9d100192cbf71";
+const PLAID_SECRET = "e1c8e85fbf43877ab29e9147b7d4b2";
 const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
-const WEBHOOK = "https://c113-75-102-136-103.ngrok-free.app" //FIXME
+const WEBHOOK = "https://eced-75-102-136-103.ngrok-free.app" //FIXME
 
 const configuration = new Configuration({
   basePath: PlaidEnvironments[PLAID_ENV],
@@ -283,6 +284,21 @@ const fetchAccounts = async (userId) => {
       throw new Error(`No Plaid access tokens found for user ID ${userId}.`);
     }
 
+    // const allUserBankAccounts = await BankAccount.find({ userId });
+    // const numberOfBankAccounts = allUserBankAccounts.length;
+    // let userAccountSummary = await UserAccountSummary.findOne({ userId });
+    // const oneHourAgo = new Date(Date.now() - 1000 * 60 * 60);
+
+    // if (
+    //   userAccountSummary &&
+    //   userAccountSummary.lastUpdated >= oneHourAgo &&
+    //   userAccountSummary.numberOfBankAccounts === numberOfBankAccounts
+    // ) {
+    //   console.log('Returning cached account summary from UserAccountSummary');
+    //   return userAccountSummary.summary; // Return the cached summary
+    // }
+
+    console.log("Fetching new data from Plaid...");
     let bankAccounts = {};
 
     for (const accessToken of user.plaidAccessTokens) {

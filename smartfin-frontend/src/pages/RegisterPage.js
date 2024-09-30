@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -14,8 +14,28 @@ function RegisterPage() {
     const navigate = useNavigate();
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+
+        if (name !== 'password' && name !== 'confirmPassword') {
+            const updatedFormData = { ...formData, [name]: value };
+            localStorage.setItem('registerFormData', JSON.stringify({
+                name: updatedFormData.name,
+                email: updatedFormData.email
+            }));
+        }
     };
+
+    useEffect(() => {
+        const storedFormData = JSON.parse(localStorage.getItem('registerFormData'));
+        if (storedFormData) {
+            setFormData((prevData) => ({
+                ...prevData,
+                name: storedFormData.name || '',
+                email: storedFormData.email || ''
+            }));
+        }
+    }, []);
 
     const handleRegister = async (event) => {
         event.preventDefault();
@@ -33,7 +53,7 @@ function RegisterPage() {
                 password: formData.password
             };
             await register(userData);
-            navigate('/verify-email');
+            navigate('/verify-email', { state: { email: formData.email } }); 
         } catch (error) {
             setError(error.response?.data?.message || 'Registration failed');
         }
@@ -51,7 +71,7 @@ function RegisterPage() {
     return (
         <div className="container d-flex justify-content-center align-items-center vh-100">
             <div className="w-100" style={{ maxWidth: '400px' }}>
-                <h2 className="text-center mb-4">Register on FinSmart</h2>
+                <h2 className="text-center mb-4">Sign Up to Nomi</h2>
                 {error && <div className="alert alert-danger">{error}</div>}
                 <form onSubmit={handleRegister} className="card p-4">
                     <div className="mb-3">

@@ -15,7 +15,7 @@ const register = catchAsync(async (req, res) => {
   
   // Send verification email
   console.log("awaiting email send");
-  await emailService.sendVerificationEmail(user.email, verificationToken);
+  emailService.sendVerificationEmail(user.email, verificationToken);
   console.log("finish email send");
   
   const tokens = await tokenService.generateAuthTokens(user);

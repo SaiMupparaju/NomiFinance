@@ -9,73 +9,154 @@ const agenda = new Agenda({ db: { address: mongoConnectionString , collection: '
 const backendBaseUrl = 'http://localhost:3001/v1';
 const crypto = require('crypto');
 const rulesEngine = require('rules-engine');
+const { DateTime } = require('luxon');
 
 // Define the job for executing rules
 
 function calculateNextRunTime(schedule) {
-    const now = new Date();
+  const {
+    frequency,
+    date,
+    dailyTimes,
+    weeklyTimes,
+    customTimes,
+    timeZone,
+    userLocalTimeZone,
+  } = schedule;
 
-    if (schedule.frequency === 'once') {
-        return new Date(schedule.date);
+  // Current time in the desired timeZone
+  const now = DateTime.now().setZone(timeZone);
+
+  if (frequency === 'once') {
+    // Parse the date provided by the user
+    const dateTime = DateTime.fromJSDate(new Date(date));
+
+    // Extract date and time components
+    const year = dateTime.year;
+    const month = dateTime.month;
+    const day = dateTime.day;
+    const hour = dateTime.hour;
+    const minute = dateTime.minute;
+    const second = dateTime.second;
+    const millisecond = dateTime.millisecond;
+
+    // Create the scheduled date in the desired timeZone
+    const scheduledDate = DateTime.fromObject(
+      {
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        millisecond,
+      },
+      { zone: timeZone }
+    );
+
+    if (scheduledDate <= now) {
+      return null; // Scheduled time has already passed
     }
 
-    if (schedule.frequency === 'daily') {
-        const times = schedule.dailyTimes.map(timeStr => {
-            const dateTime = new Date(timeStr);
-            // Create a Date object with today's date but with the time from dateTime
-            return new Date(now.getFullYear(), now.getMonth(), now.getDate(), dateTime.getHours(), dateTime.getMinutes());
-        });
+    return scheduledDate.toUTC().toJSDate(); // Return as JavaScript Date in UTC
+  }
 
-        // Filter times to get those in the future today
-        const nextTimes = times.filter(time => time >= now);
+  if (frequency === 'daily') {
+    const times = dailyTimes.map((timeStr) => {
+      // Parse the time string to extract hour and minute
+      const dateTime = DateTime.fromJSDate(new Date(timeStr));
 
-        if (nextTimes.length > 0) {
-            return nextTimes[0];
-        }
+      // Extract hour and minute
+      const hour = dateTime.hour;
+      const minute = dateTime.minute;
 
-        // If no future times today, pick the earliest time tomorrow
-        const earliestTimeToday = times.sort((a, b) => a - b)[0];
-        const tomorrow = new Date(now);
-        tomorrow.setDate(now.getDate() + 1);
-        return new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), earliestTimeToday.getHours(), earliestTimeToday.getMinutes());
+      // Set the next run time in the desired timeZone
+      let nextRun = now.set({
+        hour,
+        minute,
+        second: 0,
+        millisecond: 0,
+      });
+
+      // If the time has already passed today, schedule for tomorrow
+      if (nextRun <= now) {
+        nextRun = nextRun.plus({ days: 1 });
+      }
+
+      return nextRun;
+    });
+
+    // Get the earliest next run time
+    const nextRunTime = times.sort((a, b) => a - b)[0];
+    return nextRunTime.toUTC().toJSDate(); // Return as JavaScript Date in UTC
+  }
+
+  if (frequency === 'weekly') {
+
+    const times = weeklyTimes.map(({ day, time }) => {
+      // Parse the time string to extract hour and minute
+      const dateTime = DateTime.fromJSDate(new Date(time));
+
+      // Extract hour and minute
+      const hour = dateTime.hour;
+      const minute = dateTime.minute;
+
+      // Set the next run time in the desired timeZone
+      let nextRun = now.set({
+        weekday: day === 0 ? 7 : day, // Luxon weekdays: 1 (Monday) to 7 (Sunday)
+        hour,
+        minute,
+        second: 0,
+        millisecond: 0,
+      });
+
+      // If the time has already passed this week, schedule for next week
+      if (nextRun <= now) {
+        nextRun = nextRun.plus({ weeks: 1 });
+      }
+
+      return nextRun;
+    });
+
+    // Get the earliest next run time
+    const nextRunTime = times.sort((a, b) => a - b)[0];
+    return nextRunTime.toJSDate(); // Return as JavaScript Date in UTC
+  }
+
+  if (frequency === 'custom') {
+    const times = customTimes.map(({ date: dateStr, time: timeStr }) => {
+      // Parse the date and time strings
+      const datePart = DateTime.fromJSDate(new Date(dateStr));
+      const timePart = DateTime.fromJSDate(new Date(timeStr));
+
+      // Combine date and time components
+      const combinedDateTime = DateTime.fromObject(
+        {
+          year: datePart.year,
+          month: datePart.month,
+          day: datePart.day,
+          hour: timePart.hour,
+          minute: timePart.minute,
+          second: timePart.second,
+          millisecond: timePart.millisecond,
+        },
+        { zone: timeZone }
+      );
+
+      return combinedDateTime;
+    });
+
+    // Filter times that are in the future
+    const nextTimes = times.filter((time) => time > now);
+
+    if (nextTimes.length > 0) {
+      const nextRunTime = nextTimes.sort((a, b) => a - b)[0];
+      return nextRunTime.toUTC().toJSDate(); // Return as JavaScript Date in UTC
     }
+    return null;
+  }
 
-    if (schedule.frequency === 'weekly') {
-        const times = schedule.weeklyTimes.map(({ day, time }) => {
-            const dateTime = new Date(time);
-            const nextRunDate = new Date(now);
-            let dayDifference = (day - now.getDay() + 7) % 7;
-
-            const dateTimeString = dateTime.toTimeString().slice(0,5);
-            const nowTimeString = now.toTimeString().slice(0,5);
-            // If it's the same day but the time has passed, move to the next occurrence
-            if (dayDifference === 0 && dateTimeString < nowTimeString) {
-                //console.log(dateTimeString, nowTimeString);
-                dayDifference = 7;
-            }
-
-            nextRunDate.setDate(now.getDate() + dayDifference);
-            nextRunDate.setHours(dateTime.getHours(), dateTime.getMinutes(), 0, 0);
-
-            return nextRunDate;
-        });
-
-        const nextTimes = times.sort((a, b) => a - b).filter(time => time > now);
-
-        if (nextTimes.length > 0) {
-            return nextTimes[0];
-        }
-
-        return times[0];
-    }
-
-
-    if (schedule.frequency === 'custom') {
-        const times = schedule.customTimes.map(timeStr => new Date(timeStr));
-        const nextTimes = times.filter(time => time > now);
-        return nextTimes.length > 0 ? nextTimes[0] : null;
-    }
-    throw new Error('Invalid schedule frequency');
+  throw new Error('Invalid schedule frequency');
 }
 
 
@@ -97,6 +178,8 @@ const fetchFactValue = async (userId, factString, params) => {
     throw error;
   }
 };
+
+
 
 
 agenda.define('execute rule', async (job) => {
@@ -188,14 +271,40 @@ agenda.define('execute rule', async (job) => {
     // Run the engine (fact values will be fetched dynamically when needed)
     const result = await engine.run();
 
-    console.log('Executed rule. Events:', result.events);
+    if (result.events && result.events.length > 0) {
+      console.log('Rule evaluated to TRUE. Events:', result.events);
+
+      // **Handle Notifications:**
+      const event = ruleMongObj.rule.event;
+      if (event && event.params) {
+        const { phone_numbers, emails, message } = event.params;
+
+        // If the event type includes "Text", send SMS
+        if (event.type.includes("Text") && phone_numbers && phone_numbers.length > 0) {
+          for (const phoneNumber of phone_numbers) {
+            await TextService.sendText(phoneNumber, message);
+            console.log(`Sent text to ${phoneNumber}`);
+          }
+        }
+
+        // If the event type includes "Email", send Emails
+        if (event.type.includes("Email") && emails && emails.length > 0) {
+          for (const email of emails) {
+            await emailService.sendEmail(email, 'Notification', message);
+            console.log(`Sent email to ${email}`);
+          }
+        }
+      }
+    } else {
+      console.log('Rule did not evaluate to TRUE, no events triggered.');
+    }
 
     // Calculate and reschedule the next job run
     const nextRunTime = calculateNextRunTime(ruleMongObj.rule.schedule);
     if (nextRunTime) {
       job.schedule(nextRunTime); // Reschedule the job
       await job.save(); // Save the updated job
-      console.log('Next run at (EST):', nextRunTime.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+      console.log('Next run at:', nextRunTime.toLocaleString('en-US', { timeZone: 'America/New_York' }));
     } else {
       console.log('No next run time calculated. Job will not be rescheduled.');
     }
@@ -207,50 +316,57 @@ agenda.define('execute rule', async (job) => {
 
 
 agenda.on('ready', async () => {
-    console.log("agenda started up testing next date function ...");
-    const sched = {
-        frequency: "weekly",
-        weeklyTimes: [
-        {
-            day: 1,
-            time:"Sun Aug 25 2024 00:22:00 GMT-0400 (Eastern Daylight Time)"
-        },
-        {
-            day: 1,
-            time: "Sun Aug 25 2024 00:39:00 GMT-0400 (Eastern Daylight Time)"
-        }]
+  const { DateTime } = require('luxon');
+  console.log("Agenda started up testing next date function...");
+
+  const sched = {
+    frequency: "daily",
+    timeZone: "America/Los_Angeles", // Desired time zone
+    userLocalTimeZone: "America/New_York", // User's local time zone
+    weeklyTimes: [
+      {
+        day: 1, // Monday
+        time: "Sun Aug 25 2024 16:22:00 GMT-0400 (Eastern Daylight Time)"
+      },
+      {
+        day: 1, // Monday
+        time: "Sun Aug 25 2024 16:39:00 GMT-0400 (Eastern Daylight Time)"
+      }
+    ],
+    dailyTimes: ["Sun Sep 29 2024 21:32:25 GMT-0400 (Eastern Daylight Time)", "Sun Sep 29 2024 21:55:00 GMT-0400 (Eastern Daylight Time)"]
+    
+  };
+
+  const weeklyTimes = sched.weeklyTimes;
+  const timeZone = sched.timeZone;
+  const now = DateTime.now().setZone(timeZone);
+
+  let nextRunTime = calculateNextRunTime(sched);
+
+  if (nextRunTime) {
+    // Convert nextRunTime to a JavaScript Date object in UTC
+    
+    const nextRunDate = nextRunTime;
+
+    // Convert the nextRunDate to a more readable format
+    const estOptions = {
+      timeZone: 'America/New_York', // Displaying in Eastern Time
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: true
     };
 
-    const next = calculateNextRunTime(sched);
-    if (next) {
-        const estOptions = {
-            timeZone: 'America/New_York',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: 'numeric',
-            second: 'numeric',
-            hour12: true
-        };
-        const secret = crypto.randomBytes(64).toString('hex');
-    console.log("secret", secret);
+    const nextRunInEST = new Intl.DateTimeFormat('en-US', estOptions).format(nextRunDate);
+    console.log("Next run at (EST):", nextRunInEST);;
 
-        const nextRunInEST = new Intl.DateTimeFormat('en-US', estOptions).format(next);
-        console.log("Next run at (EST):", nextRunInEST);
-
-        // Send a test email
-        try {
-            // await TextService.sendText(
-            //     "+15712532500",
-            //     "hehe"
-            // );
-        } catch (err) {
-            console.error('Failed to send test email:', err);
-        }
-    } else {
-        console.log("No valid next run time found.");
-    }
+    // Now you can use nextRunDate with Agenda
+  } else {
+    console.log("No valid next run time found.");
+  }
 });
 
 module.exports = agenda;

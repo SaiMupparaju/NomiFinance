@@ -3,6 +3,7 @@ import { Form, Dropdown, Button, Row, Col, Card } from 'react-bootstrap';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { FaTimes } from 'react-icons/fa';
+import Swal from 'sweetalert2';  // Import SweetAlert2 for alerts
 
 function EventSection({ presetEvent, onEventChange }) {
   const [eventType, setEventType] = useState(presetEvent?.type || 'Notify Text');
@@ -36,30 +37,50 @@ function EventSection({ presetEvent, onEventChange }) {
     console.log('Event JSON:', JSON.stringify(updatedEvent, null, 2));
   }, [eventType, emails, phoneNumbers, message, onEventChange]);
 
-  const handleEmailKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (emailInput.trim() && /^\S+@\S+\.\S+$/.test(emailInput.trim())) {
-        setEmails([...emails, emailInput.trim()]);
-        setEmailInput('');
-      }
+  // Handle 'Coming Soon' dropdown options
+  const handleEventTypeChange = (eventKey) => {
+    if (eventKey.includes('Coming Soon')) {
+      Swal.fire({
+        title: 'Coming Soon!',
+        text: 'This feature is not available yet, but it’s coming soon!',
+        icon: 'info',
+        confirmButtonText: 'OK',
+      });
+    } else {
+      setEventType(eventKey);
     }
   };
 
-  const handlePhoneNumberChange = (value) => {
-    if (value) {
-      setPhoneInput(value);
+  const handleAddEmail = () => {
+    if (emailInput.trim() && /^\S+@\S+\.\S+$/.test(emailInput.trim())) {
+      setEmails([...emails, emailInput.trim()]);
+      setEmailInput('');
+    }
+  };
+
+  const handleEmailKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddEmail();
+    }
+  };
+
+  const handleAddPhoneNumber = () => {
+    if (phoneInput) {
+      setPhoneNumbers([...phoneNumbers, phoneInput]);
+      setPhoneInput('');
     }
   };
 
   const handlePhoneNumberKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (phoneInput) {
-        setPhoneNumbers([...phoneNumbers, phoneInput]);
-        setPhoneInput('');
-      }
+      handleAddPhoneNumber();
     }
+  };
+
+  const handlePhoneNumberChange = (value) => {
+    setPhoneInput(value);
   };
 
   const handleRemoveEmail = (index) => {
@@ -77,7 +98,7 @@ function EventSection({ presetEvent, onEventChange }) {
         <Form.Group as={Row} controlId="formEventType" className="mb-3">
           <Form.Label column sm={2}>Event Type</Form.Label>
           <Col sm={10}>
-            <Dropdown onSelect={(e) => setEventType(e)}>
+            <Dropdown onSelect={handleEventTypeChange}>
               <Dropdown.Toggle variant="primary" id="dropdown-basic">
                 {eventType || 'Select Event Type'}
               </Dropdown.Toggle>
@@ -85,8 +106,8 @@ function EventSection({ presetEvent, onEventChange }) {
                 <Dropdown.Item eventKey="Notify Text">Notify Text</Dropdown.Item>
                 <Dropdown.Item eventKey="Notify Email">Notify Email</Dropdown.Item>
                 <Dropdown.Item eventKey="Notify Text and Email">Notify Text and Email</Dropdown.Item>
-                <Dropdown.Item eventKey="Notify Text and Send Transaction">Notify Text and Send Transaction</Dropdown.Item>
-                <Dropdown.Item eventKey="Notify Email and Send Transaction">Notify Email and Send Transaction</Dropdown.Item>
+                <Dropdown.Item eventKey="Coming Soon: Notify Text and Send Transaction">Notify Text and Send Transaction</Dropdown.Item>
+                <Dropdown.Item eventKey="Coming Soon: Notify Email and Send Transaction">Notify Email and Send Transaction</Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
           </Col>
@@ -104,14 +125,18 @@ function EventSection({ presetEvent, onEventChange }) {
                   </Button>
                 </div>
               ))}
-              <Form.Control
-                type="text"
-                placeholder="Add email and press Enter"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                onKeyPress={handleEmailKeyPress}
-                onBlur={() => setEmailInput('')} // Clear input on blur to handle invalid emails
-              />
+              <div className="d-flex align-items-center">
+                <Form.Control
+                  type="text"
+                  placeholder="Add email"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  onKeyPress={handleEmailKeyPress}
+                />
+                <Button className="ms-2" onClick={handleAddEmail}>
+                  Add
+                </Button>
+              </div>
             </Col>
           </Form.Group>
         )}
@@ -128,12 +153,17 @@ function EventSection({ presetEvent, onEventChange }) {
                   </Button>
                 </div>
               ))}
-              <PhoneInput
-                placeholder="Add phone number and press Enter"
-                value={phoneInput}
-                onChange={handlePhoneNumberChange}
-                onKeyPress={handlePhoneNumberKeyPress}
-              />
+              <div className="d-flex align-items-center">
+                <PhoneInput
+                  placeholder="Add phone number"
+                  value={phoneInput}
+                  onChange={handlePhoneNumberChange}
+                  onKeyPress={handlePhoneNumberKeyPress}
+                />
+                <Button className="ms-2" onClick={handleAddPhoneNumber}>
+                  Add
+                </Button>
+              </div>
             </Col>
           </Form.Group>
         )}

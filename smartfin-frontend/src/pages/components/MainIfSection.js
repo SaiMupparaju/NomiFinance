@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, Container, Dropdown } from 'react-bootstrap';
 import IfSection from './IfSection';
+import Swal from 'sweetalert2';
 import '../styles/IfSection.css';
-import { fetchBankAccounts } from '../../utils/plaid_api';
+//import { fetchBankAccounts } from '../../utils/plaid_api';
 import { generateFacts } from '../../utils/FactGenerator';
+
 
 function MainIfSection({ onConditionsChange, conditions, accountProperties, setMainIfIsValid }) {
   const [mainOP, setMainOP] = useState("all");
@@ -38,24 +40,6 @@ function MainIfSection({ onConditionsChange, conditions, accountProperties, setM
     setMainIfIsValid(allValid); // Pass validity to the parent if needed
   };
 
-
-  const [bankAccounts, setBankAccounts] = useState([]);
-  const [facts, setFacts] = useState({});
-
-
-
-  useEffect(() => {
-    const getBankAccounts = async () => {
-      try {
-        const accounts = await fetchBankAccounts();
-        setBankAccounts(accounts);
-      } catch (error) {
-        console.error('Error fetching bank accounts:', error);
-      }
-    };
-
-    getBankAccounts();
-  }, []);
 
   useEffect(() => {
     console.log("Current JSON State:", JSON.stringify(ifSections, null, 2));
@@ -257,6 +241,19 @@ function MainIfSection({ onConditionsChange, conditions, accountProperties, setM
     setIfSections(updatedSections);
     onConditionsChange(updatedSections);
   };
+
+  // New function to handle showing the "Coming Soon" alert
+  const showComingSoonAlert = () => {
+    Swal.fire({
+      title: 'Coming Soon!',
+      text: 'This feature is not yet available. Stay tuned!',
+      icon: 'info',
+      confirmButtonText: 'OK',
+      customClass: {
+        popup: 'swal2-popup-custom' // You can customize the alert further via CSS classes
+      }
+    });
+  };
   
   return (
     <div className="if-section p-3 mb-3 bg-light border rounded">
@@ -264,10 +261,10 @@ function MainIfSection({ onConditionsChange, conditions, accountProperties, setM
         <Button variant="outline-warning" className="me-2">
           EVENT
         </Button>
-        <Button variant="outline-secondary" className="me-2" disabled>
+        <Button variant="outline-secondary" className="me-2"  onClick={showComingSoonAlert}> 
           TIMER
         </Button>
-        <Button variant="outline-secondary" disabled>
+        <Button variant="outline-secondary"  onClick={showComingSoonAlert}>
           DIRECT ORDER
         </Button>
       </div>

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button, Container, Dropdown } from 'react-bootstrap';
 import IfSection from './IfSection';
 import '../styles/IfSection.css';
-import { fetchBankAccounts } from '../../utils/plaid_api';
-import { generateFacts } from '../../utils/FactGenerator';
+import Swal from 'sweetalert2';
+//import { fetchBankAccounts } from '../../utils/plaid_api';
+//import { generateFacts } from '../../utils/FactGenerator';
 
 function EditMainIfSection({ onConditionsChange, conditions, accountProperties }) {
   const [mainOP, setMainOP] = useState("all");
@@ -50,21 +51,6 @@ function EditMainIfSection({ onConditionsChange, conditions, accountProperties }
     }
   }, [conditions]);
 
-  const [bankAccounts, setBankAccounts] = useState([]);
-  const [facts, setFacts] = useState({});
-
-  useEffect(() => {
-    const getBankAccounts = async () => {
-      try {
-        const accounts = await fetchBankAccounts();
-        setBankAccounts(accounts);
-      } catch (error) {
-        console.error('Error fetching bank accounts:', error);
-      }
-    };
-
-    getBankAccounts();
-  }, []);
 
   useEffect(() => {
     console.log("EDIT MAIN IF Current JSON State:", JSON.stringify(ifSections, null, 2));
@@ -265,6 +251,18 @@ function EditMainIfSection({ onConditionsChange, conditions, accountProperties }
     setIfSections(updatedSections);
     onConditionsChange(updatedSections);
   };
+
+  const showComingSoonAlert = () => {
+    Swal.fire({
+      title: 'Coming Soon!',
+      text: 'This feature is not yet available. Stay tuned!',
+      icon: 'info',
+      confirmButtonText: 'OK',
+      customClass: {
+        popup: 'swal2-popup-custom' // You can customize the alert further via CSS classes
+      }
+    });
+  };
   
 
   return (
@@ -273,10 +271,10 @@ function EditMainIfSection({ onConditionsChange, conditions, accountProperties }
         <Button variant="outline-warning" className="me-2">
           EVENT
         </Button>
-        <Button variant="outline-secondary" className="me-2" disabled>
+        <Button variant="outline-secondary" className="me-2" onClick={showComingSoonAlert}>
           TIMER
         </Button>
-        <Button variant="outline-secondary" disabled>
+        <Button variant="outline-secondary" onClick={showComingSoonAlert}>
           DIRECT ORDER
         </Button>
       </div>

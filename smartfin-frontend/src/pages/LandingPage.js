@@ -33,7 +33,7 @@ function LandingPage() {
         <h1 className="mb-3">Nomi</h1>
         <p className="mb-4">The app to make your Finances Smarter</p>
         <div>
-          <button onClick={handleRegisterClick} className="btn btn-primary mr-2">Register</button>
+          <button onClick={handleRegisterClick} className="btn btn-primary mr-2">Sign Up</button>
           <button onClick={handleLoginClick} className="btn btn-secondary">Login</button>
         </div>
       </div>

@@ -4,6 +4,7 @@ const config = require('./config/config');
 const logger = require('./config/logger');
 
 
+mongoose.set('useFindAndModify', false);
 
 let server;
 mongoose.connect(config.mongoose.url, config.mongoose.options).then(() => {

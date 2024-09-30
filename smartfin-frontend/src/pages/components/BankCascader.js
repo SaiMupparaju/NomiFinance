@@ -157,6 +157,10 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
         showSearch
       />
 
+        {showCategories && (
+          <span style={{ alignSelf: 'center' }}>on</span>
+        )}
+
       {showCategories && (
         <Select
           mode="multiple"

@@ -91,7 +91,7 @@ useEffect(() => {
   
         // Validate fact
         if (!condition.fact || condition.fact === '') {
-          return { isValid: false, message: 'A condition is missing a fact.' };
+          return { isValid: false, message: 'You forgot to tell us what to compare for one of your facts!' };
         }
   
         // Validate operator
@@ -101,7 +101,7 @@ useEffect(() => {
   
         // Validate value (ensure value is properly structured)
         if ((condition.value === null || condition.value === 0) && !condition.value.fact) {
-          return { isValid: false, message: 'A condition contains an empty fact reference in value.' };
+          return { isValid: false, message: 'Of of your conditions is empty!' };
         }
   
         
@@ -141,7 +141,7 @@ useEffect(() => {
     }
 
 
-    return "poop";
+    return ;
   };
 
   const handleCreateOrUpdateRule = async () => {
