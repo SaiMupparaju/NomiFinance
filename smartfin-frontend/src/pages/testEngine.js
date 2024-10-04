@@ -102,7 +102,7 @@ function TestPage() {
               "saivamsim26@gmail.com"
             ],
             "phone_numbers": [],
-            "message": "This is a preset message."
+            "message": "Your notification message here."
           }
         }
       }

@@ -3,45 +3,64 @@ import Switch from 'react-switch';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext'; 
 import axiosInstance from '../../utils/axiosInstance';
+import Swal from 'sweetalert2'; // Import SweetAlert2
+import withReactContent from 'sweetalert2-react-content';
 
 function RuleCard({ rule, onToggle }) {
     const [isActive, setIsActive] = useState(rule.isActive || false);
     const navigate = useNavigate();
     const { auth } = useAuth(); // Get auth context
+    const MySwal = withReactContent(Swal);
   
     const handleToggle = async (checked) => {
       const action = checked ? 'activate' : 'deactivate';
-      const confirmMessage = `Are you sure you want to turn this rule ${checked ? 'on' : 'off'}?`;
+
+      // Show SweetAlert2 confirmation dialog
+      MySwal.fire({
+        title: `Are you sure?`,
+        text: `Do you want to turn this rule ${checked ? 'on' : 'off'}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: `Yes, ${checked ? 'turn it on' : 'turn it off'}!`
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            const userId = auth.user.id;
+            const url = `/rules/${rule._id}/${action}`;
     
-      if (window.confirm(confirmMessage)) {
-        try {
-          const userId = auth.user.id;
-          const url = `/rules/${rule._id}/${action}`;
+            const response = await axiosInstance.put(url, { userId });
     
-          const response = await axiosInstance.put(url, { userId });
-    
-          if (response.status === 200) {
-            setIsActive(checked);
-            onToggle(rule._id, checked);
-          } else {
-            alert(`Failed to ${action} rule: ${response.data.error}`);
-            // Revert the switch
-            setIsActive(!checked);
+            if (response.status === 200) {
+              setIsActive(checked);
+              onToggle(rule._id, checked);
+              MySwal.fire(
+                'Success!',
+                `The rule has been ${checked ? 'activated' : 'deactivated'}.`,
+                'success'
+              );
+            } else {
+              MySwal.fire(
+                'Error!',
+                `Failed to ${action} rule: ${response.data.error}`,
+                'error'
+              );
+              setIsActive(!checked); // Revert the switch
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            MySwal.fire(
+              'Error!',
+              `An error occurred while trying to ${action} the rule.`,
+              'error'
+            );
+            setIsActive(!checked); // Revert the switch
           }
-        } catch (error) {
-          console.error('Error:', error);
-          if (error.response && error.response.data && error.response.data.error) {
-            alert(`Failed to ${action} rule: ${error.response.data.error}`);
-          } else {
-            alert(`An error occurred while trying to ${action} the rule.`);
-          }
-          // Revert the switch
-          setIsActive(!checked);
+        } else {
+          setIsActive(!checked); // User canceled the action, revert the switch
         }
-      } else {
-        // User canceled the action, revert the switch
-        setIsActive(!checked);
-      }
+      });
     };
     
   

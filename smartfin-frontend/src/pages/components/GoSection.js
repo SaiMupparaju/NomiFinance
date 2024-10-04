@@ -17,7 +17,7 @@ function GoSection({ ruleName, setRuleName, handleCreateRule }) {
           <Form.Label>Now name this rule</Form.Label>
           <Form.Control
             type="text"
-            placeholder="Eg. Divide and conquer"
+            placeholder="Eg. Got Paid!"
             value={ruleName}
             onChange={(e) => setRuleName(e.target.value)}
           />

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Row, Col, Button, Card } from 'react-bootstrap';
+import { Form, Row, Col, Button, Card, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { FaQuestionCircle } from 'react-icons/fa';
 import { tz } from 'moment-timezone'; // Import moment-timezone for timezone handling
 
 // Example of time zones you can provide as options
@@ -219,10 +220,25 @@ function ExecuteSection({ schedule = {}, setSchedule, isNewRule }) {
           <option value="daily">Daily</option>
           <option value="weekly">Weekly</option>
           <option value="monthly">Monthly</option>
+          <option value="ontruth">Whenever Rule is True</option>
           <option value="custom">Custom Time</option>
         </Form.Control>
       </Form.Group>
 
+      {frequency === 'ontruth' && (
+        <Form.Group controlId="onTruthTooltip" className="mt-3">
+          <OverlayTrigger
+            placement="right"
+            overlay={<Tooltip id="tooltip-right">We will check to see if the above conditions are met whenever your account information updates.</Tooltip>}
+          >
+            <span className="d-inline-block">
+              <FaQuestionCircle style={{ fontSize: '1.2rem', cursor: 'pointer', color: '#007bff' }} />
+            </span>
+          </OverlayTrigger>
+        </Form.Group>
+      )}
+
+      {((frequency !== 'ontruth')) && (
       <Form.Group controlId="timeZone" className="mt-3">
         <Form.Label>What timezone are you in?</Form.Label>
         <Form.Control as="select" value={timeZone} onChange={handleTimeZoneChange}>
@@ -233,6 +249,7 @@ function ExecuteSection({ schedule = {}, setSchedule, isNewRule }) {
           ))}
         </Form.Control>
       </Form.Group>
+      )}
 
       {frequency === 'once' && (
         <Form.Group controlId="executeDate" className="mt-3">

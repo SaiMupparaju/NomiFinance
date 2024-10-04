@@ -18,7 +18,7 @@ function IfSection({
   const operatorMapping = {
     greaterThanInclusive: '>= Greater Than or Equal To',
     lessThanInclusive: '<= Less Than or Equal To',
-    equal: '== Equal',
+    equal: '= Equal',
     notEqual: '!= Not Equal',
     greaterThan: '> Greater Than',
     lessThan: '< Less Than',
@@ -27,7 +27,7 @@ function IfSection({
   const operatorReverseMapping = {
     '>= Greater Than or Equal To': 'greaterThanInclusive',
     '<= Less Than or Equal To': 'lessThanInclusive',
-    '== Equal': 'equal',
+    '= Equal': 'equal',
     '!= Not Equal': 'notEqual',
     '> Greater Than': 'greaterThan',
     '< Less Than': 'lessThan',

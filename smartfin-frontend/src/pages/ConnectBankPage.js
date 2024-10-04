@@ -49,7 +49,7 @@ function ConnectBankPage() {
                 <div className="col-lg-6 col-md-8">
                     <div className="card card-custom">  {/* Using custom card class */}
                         <h2 className="text-center">Connect Your Bank Accounts</h2>
-                        <p className="mt-3">To use FinSmart effectively, you need to connect at least one bank account. This allows us to help manage your finances seamlessly.</p>
+                        <p className="mt-3">Nomi lets you program your finances by connecting to at least one of your bank accounts. You can undo this at any time.</p>
                         <div className="d-flex justify-content-center mt-4">
                             <button onClick={handleConnect} className="btn btn-custom">Connect</button>  {/* Using custom button class */}
                         </div>

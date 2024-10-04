@@ -123,9 +123,7 @@ function RegisterPage() {
                         />
                     </div>
                     <button type="submit" className="btn btn-primary w-100 mb-3">Register</button>
-                    <button type="button" onClick={handleGoogleSignUp} className="btn btn-outline-secondary w-100">
-                        Sign up with Google
-                    </button>
+
                 </form>
             </div>
         </div>

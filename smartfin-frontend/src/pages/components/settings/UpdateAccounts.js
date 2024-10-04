@@ -4,6 +4,8 @@ import { usePlaidLink } from 'react-plaid-link';
 import { FaSyncAlt, FaExclamationTriangle } from 'react-icons/fa';
 import { useAuth } from '../../../contexts/AuthContext';
 import axiosInstance from '../../../utils/axiosInstance'; // Use axios for authenticated requests
+import Swal from 'sweetalert2'; // Import SweetAlert2
+import withReactContent from 'sweetalert2-react-content';
 
 const PlaidLinkUpdate = ({ linkToken, onSuccess, onExit }) => {
   const config = {
@@ -22,6 +24,7 @@ const UpdateAccounts = ({ bankAccounts }) => {
   const [linkTokens, setLinkTokens] = useState({}); // Mapping of bankName to { linkToken, fetchedAt }
   const [currentBank, setCurrentBank] = useState(null);
   const [newAccountLinkToken, setNewAccountLinkToken] = useState(null); // For new account link token
+  const MySwal = withReactContent(Swal); // Initialize SweetAlert2 with ReactContent
 
   const handleUpdateAccount = async (bankName) => {
     const tokenInfo = linkTokens[bankName];
@@ -49,11 +52,19 @@ const UpdateAccounts = ({ bankAccounts }) => {
           }));
           setCurrentBank(bankName);
         } else {
-          alert('Failed to create link token.');
+          MySwal.fire({
+            icon: 'error',
+            title: 'Failed to Create Link Token',
+            text: 'Unable to create the Plaid link token. Please try again later.',
+          });
         }
       } catch (error) {
         console.error('Error updating account:', error);
-        alert('An error occurred while updating the account.');
+        MySwal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'An error occurred while updating the account.',
+        });
       }
     }
   };
@@ -62,11 +73,22 @@ const UpdateAccounts = ({ bankAccounts }) => {
     console.log('Plaid Link success:', metadata);
     // Optionally handle public_token exchange or refresh account list
     setCurrentBank(null);
+
+    MySwal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: 'Your account was successfully linked!',
+    });
   };
 
   const handleOnExit = (err, metadata) => {
     if (err) {
       console.error('Plaid Link error:', err);
+      MySwal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'There was an issue with the Plaid link flow. Please try again.',
+      });
     }
     console.log('Plaid Link exit:', metadata);
     setCurrentBank(null);
@@ -82,11 +104,19 @@ const UpdateAccounts = ({ bankAccounts }) => {
       if (link_token) {
         setNewAccountLinkToken(link_token); // Set token for new account linking
       } else {
-        alert('Failed to create link token.');
+        MySwal.fire({
+          icon: 'error',
+          title: 'Failed to Create Link Token',
+          text: 'Unable to create the Plaid link token. Please try again later.',
+        });
       }
     } catch (error) {
       console.error('Error fetching new account link token:', error);
-      alert('An error occurred while fetching the link token.');
+      MySwal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'An error occurred while fetching the link token.',
+      });
     }
   };
 
@@ -128,9 +158,8 @@ const UpdateAccounts = ({ bankAccounts }) => {
       </Accordion>
 
       <Button variant="primary" onClick={handleAddNewAccount}>
-          ADD NEW ITEM
+        ADD NEW ITEM
       </Button>
-
 
       {/* Render Plaid Link for adding a new account */}
       {newAccountLinkToken && (
@@ -148,8 +177,6 @@ const UpdateAccounts = ({ bankAccounts }) => {
           onExit={handleOnExit}
         />
       )}
-
-
     </div>
   );
 };

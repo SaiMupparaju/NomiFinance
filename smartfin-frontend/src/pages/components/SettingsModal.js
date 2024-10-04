@@ -23,9 +23,6 @@ function SettingsModal({ show, handleClose, bankAccounts }) {
                                     <Nav.Link eventKey="profile-settings">Profile Settings</Nav.Link>
                                 </Nav.Item>
                                 <Nav.Item>
-                                    <Nav.Link eventKey="phone-contacts">Phone Contacts</Nav.Link>
-                                </Nav.Item>
-                                <Nav.Item>
                                     <Nav.Link eventKey="payment-info">Payment Info</Nav.Link>
                                 </Nav.Item>
                             </Nav>

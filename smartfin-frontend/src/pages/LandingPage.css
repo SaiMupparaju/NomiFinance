@@ -1,8 +1,12 @@
-/* Style to position the "Continue as Guest" button at the bottom center */
-.continue-as-guest {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-  
+/* Center the buttons and align them properly */
+.btn-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px; /* Space between the buttons */
+}
+
+.btn {
+  width: 200px;  /* Set a fixed width for better alignment */
+  text-align: center;
+}

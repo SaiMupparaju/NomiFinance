@@ -31,16 +31,12 @@ function LandingPage() {
     <div className="container d-flex justify-content-center align-items-center vh-100 position-relative">
       <div className="text-center">
         <h1 className="mb-3">Nomi</h1>
-        <p className="mb-4">The app to make your Finances Smarter</p>
-        <div>
-          <button onClick={handleRegisterClick} className="btn btn-primary mr-2">Sign Up</button>
+        <p className="mb-4">The app to make your finances smarter</p>
+        <div className="btn-container">
+          <button onClick={handleRegisterClick} className="btn btn-primary">Sign Up</button>
           <button onClick={handleLoginClick} className="btn btn-secondary">Login</button>
+          <button onClick={handleGuestClick} className="btn btn-outline-primary">Continue as Guest</button>
         </div>
-      </div>
-
-      {/* Continue as Guest Button - Positioned at the bottom center */}
-      <div className="continue-as-guest">
-        <button onClick={handleGuestClick} className="btn btn-outline-primary">Continue as Guest</button>
       </div>
     </div>
   );
