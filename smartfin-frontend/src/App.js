@@ -12,6 +12,10 @@ import VerifyEmailPage from './pages/components/VerifyEmailPage';
 import ResetPasswordPage from './pages/ResetPassword';
 import TestPage from './pages/testEngine';
 import FactQuery from './pages/components/FactQuery';
+import PaymentSuccess from './pages/components/PaymentSuccess';
+import PaymentCancel from './pages/components/PaymentCancel';
+import PricingTable from './pages/components/PricingTable';
+
 function App() {
   return (
       <Routes>
@@ -25,6 +29,9 @@ function App() {
         <Route path="/edit-rule/:ruleId" element={<EditRulePage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
+        <Route path='/pricing' element={<PricingTable />} />
 
         {/* Additional routes can be added here */}
       </Routes>
@@ -32,3 +39,4 @@ function App() {
 }
 
 export default App;
+//TODO need to put the payment id in the home.js 

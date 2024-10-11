@@ -6,6 +6,7 @@ const plaidRoute = require('./plaid.route');
 const config = require('../../config/config');
 const ruleRoute = require('./rule.routes');
 const factRoute = require('./fact.route');
+const stripeRoute = require('./stripe.route');
 const router = express.Router();
 
 const defaultRoutes = [
@@ -28,6 +29,10 @@ const defaultRoutes = [
   {
     path: '/fact',
     route: factRoute
+  },
+  {
+    path:'/payment',
+    route:stripeRoute
   }
 ];
 

@@ -16,6 +16,7 @@ const ApiError = require('./utils/ApiError');
 const { fetchAndStoreRates } = require('./services/exchangeRateService');
 
 
+
 const app = express();
 
 if (config.env !== 'test') {
@@ -26,6 +27,12 @@ if (config.env !== 'test') {
 
 // set security HTTP headers
 app.use(helmet());
+
+app.use(
+  '/v1/payment/webhook',
+  express.raw({ type: 'application/json' }), // This ensures req.body is a raw Buffer
+  require('../src/routes/v1/stripeWebhook.route')
+);
 
 // parse json request body
 app.use(express.json());
@@ -56,6 +63,8 @@ if (config.env === 'production') {
 // v1 api routes
 app.use('/v1', routes);
 app.use('/webhook/plaid', require('./routes/v1/plaid.route'));
+
+
 
 const initializeExchangeRates = async () => {
   try {

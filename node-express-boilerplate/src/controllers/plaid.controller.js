@@ -8,7 +8,7 @@ const { getBankNameByAccessToken } = require('../services/BankAccountService');
 const PLAID_CLIENT_ID = "66ef2c652ac9d100192cbf71";
 const PLAID_SECRET = "e1c8e85fbf43877ab29e9147b7d4b2";
 const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
-const WEBHOOK = "https://5b13-75-102-136-103.ngrok-free.app" //FIXME
+const WEBHOOK = "https://ffa8-75-102-136-103.ngrok-free.app" //FIXME
 
 const configuration = new Configuration({
   basePath: PlaidEnvironments[PLAID_ENV],

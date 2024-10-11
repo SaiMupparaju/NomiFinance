@@ -108,9 +108,21 @@ export const AuthProvider = ({ children }) => {
         setAuth({ user: null, tokens: null });
     };
 
+    const continueAsGuest = () => {
+        localStorage.setItem('isGuest', 'true');
+        setAuth({ user: null, tokens: null, isGuest: true });
+    }
+
+    const setUser = (user) => {
+        setAuth((prevAuth) => ({ ...prevAuth, user }));
+        localStorage.setItem('user', JSON.stringify(user));
+      };
+
+
+
 
     return (
-        <AuthContext.Provider value={{ auth, login, register, logout, getLinkToken, linkToken, exchangePublicToken, resendVerificationEmail, deleteUserConfirm }}>
+        <AuthContext.Provider value={{ auth, login, register, logout, getLinkToken, linkToken, exchangePublicToken, resendVerificationEmail, deleteUserConfirm, continueAsGuest, setUser }}>
             {children}
         </AuthContext.Provider>
     );

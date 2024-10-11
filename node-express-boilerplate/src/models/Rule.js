@@ -23,6 +23,10 @@ const ruleSchema = new mongoose.Schema({
   jobId: {
     type: mongoose.Schema.Types.ObjectId,  // This will store the ID of the job in Agenda
     default: null
+  },
+  color: {
+    type: String,
+    default: '#ffffff' // Default color (white)
   }
 });
   

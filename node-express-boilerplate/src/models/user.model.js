@@ -64,6 +64,31 @@ const userSchema = mongoose.Schema({
       required: false  // Make this optional as not every user might connect to Plaid immediately
   },
   plaidUserToken: String,
+  // **Stripe-related fields**
+  stripeCustomerId: {
+    type: String,
+    default: null,
+  },
+  subscriptionId: {
+    type: String,
+    default: null,
+  },
+  subscriptionStatus: {
+    type: String,
+    default: null,
+  },
+  subscriptionPlan: {
+    type: String,
+    default: null,
+  },
+  subscriptionProductId: {
+    type: String,
+    default: null,
+  },
+  subscriptionPriceId: {
+    type: String,
+    default: null,
+  },
 }, {
   timestamps: true
 });

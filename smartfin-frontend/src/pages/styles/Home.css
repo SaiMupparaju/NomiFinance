@@ -37,6 +37,15 @@
   max-width: 1000px; /* Max width for large cards */
   width: 100%; /* Ensure full width for large layout */
 }
+
+.welcome-message {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #000;
+}
   
   .navbar {
     margin-bottom: 20px;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFact } from '../contexts/FactContext'; 
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,7 @@ import RuleCard from './components/RuleCard';
 import SettingsModal from './components/SettingsModal';
 import { Navbar, Nav, NavDropdown, Button, Container, Row, Col } from 'react-bootstrap';
 import { FaCog, FaThLarge, FaTh, FaBars, FaSignOutAlt, FaPlus } from 'react-icons/fa';
+import { loadStripe } from '@stripe/stripe-js';
 import './styles/Home.css';
 
 function Home() {
@@ -96,14 +97,21 @@ function Home() {
   const getColSize = (layoutOption) => {
     switch(layoutOption) {
       case 'small':
-        return { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 }; // More columns per row
+        return { xs: 12, sm: 6, md: 3 }; // 4 columns per row at md breakpoint
       case 'medium':
-        return { xs: 12, sm: 6, md: 6, lg: 4, xl: 3 };
+        return { xs: 12, sm: 6, md: 6 }; // 2 columns per row at md breakpoint
       case 'large':
-        return { xs: 12, sm: 12, md: 12, lg: 6, xl: 4 }; // Fewer columns per row
+        return { xs: 12, sm: 12, md: 12 }; // 1 column per row
       default:
-        return { xs: 12, sm: 6, md: 4, lg: 3, xl: 2 };
+        return { xs: 12, sm: 6, md: 3 };
     }
+  };
+
+  const stripePromise = useMemo(() => loadStripe("pk_test_51Q74V1FbGvhl0lO07hE1gQ7N8T2ejNIphVf2BsJcmYLm15IfJDfRQ7SBsEG6LAWkScHD3NtzK8scMacLLn9V6lEV00qBGkCE6n"), []);
+
+  // Function to initiate the payment
+  const handlePayment = () => {
+    navigate('/pricing'); // Replace '/pricing' with the actual route to your Pricing Table
   };
 
   return (
@@ -137,10 +145,22 @@ function Home() {
                 <FaCog className="text-white" />
               </Nav.Link>
 
-              {/* Logout Button */}
-              <Button variant="danger" onClick={handleLogout} className="ms-2">
-                <FaSignOutAlt /> Logout
-              </Button>
+              {auth.user && auth.user.subscriptionStatus !== 'active' && (
+                <Button variant="success" onClick={handlePayment} className="me-2">
+                  Subscribe Now
+                 </Button>
+              )}
+
+              {/* Conditionally render Logout or Sign Up button */}
+              {!auth.user ? (
+                <Button variant="success" onClick={() => navigate('/register')} className="ms-2">
+                  Sign Up
+                </Button>
+              ) : (
+                <Button variant="danger" onClick={handleLogout} className="ms-2">
+                  <FaSignOutAlt /> Logout
+                </Button>
+              )}
             </Nav>
           </Navbar.Collapse>
         </Container>

@@ -5,12 +5,35 @@ import { useAuth } from '../../contexts/AuthContext';
 import axiosInstance from '../../utils/axiosInstance';
 import Swal from 'sweetalert2'; // Import SweetAlert2
 import withReactContent from 'sweetalert2-react-content';
+import { SketchPicker } from 'react-color';
+import { FaPalette } from 'react-icons/fa'; 
 
 function RuleCard({ rule, onToggle }) {
     const [isActive, setIsActive] = useState(rule.isActive || false);
     const navigate = useNavigate();
     const { auth } = useAuth(); // Get auth context
     const MySwal = withReactContent(Swal);
+    const [color, setColor] = useState(rule.color || '#ffffff');
+    const [showColorPicker, setShowColorPicker] = useState(false);
+
+    const handleColorChange = async (newColor) => {
+      setColor(newColor.hex);
+    
+      try {
+        const response = await axiosInstance.put(`/rules/${rule._id}/color`, { color: newColor.hex });
+    
+        if (response.status === 200) {
+          // Optionally, show a success message
+          //MySwal.fire('Success!', 'Rule color updated.', 'success');
+        } else {
+          throw new Error('Failed to update rule color');
+        }
+      } catch (error) {
+        console.error('Error updating rule color:', error);
+        MySwal.fire('Error!', 'An error occurred while updating the rule color.', 'error');
+      }
+    };
+    
   
     const handleToggle = async (checked) => {
       const action = checked ? 'activate' : 'deactivate';
@@ -70,13 +93,30 @@ function RuleCard({ rule, onToggle }) {
     };
   
     return (
-      <div className="card w-100">
+      <div className="card w-100 rounded" style={{ backgroundColor: color }}>
         <div className="card-body d-flex flex-column">
-          <h5 className="card-title text-center">
-            {rule.rule.name}
-          </h5>
+          <div className="d-flex justify-content-between align-items-start">
+            <h5 className="card-title">{rule.rule.name}</h5>
+            <div className="color-picker-container" style={{ position: 'relative' }}>
+              <FaPalette
+                style={{ cursor: 'pointer' }}
+                onClick={() => setShowColorPicker(!showColorPicker)}
+              />
+              {showColorPicker && (
+                <div style={{ position: 'absolute', zIndex: 2, right: 0 }}>
+                  <div
+                    style={{ position: 'fixed', top: 0, left: 0, bottom: 0, right: 0 }}
+                    onClick={() => setShowColorPicker(false)}
+                  />
+                  <SketchPicker color={color} onChangeComplete={handleColorChange} />
+                </div>
+              )}
+            </div>
+          </div>
           <div className="mt-auto d-flex justify-content-between align-items-center">
-            <button className="btn btn-primary" onClick={handleEdit}>Edit</button>
+            <button className="btn btn-primary" onClick={handleEdit}>
+              Edit
+            </button>
             <Switch
               onChange={handleToggle}
               checked={isActive}

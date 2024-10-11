@@ -4,7 +4,7 @@ const schedulerApi = require('../utils/schedulerApi');
 // Create a new rule
 exports.createRule = async (req, res) => {
   try {
-    const { creatorId, subscriberId, rule } = req.body;
+    const { creatorId, subscriberId, rule, color } = req.body;
 
     // Validate input
     if (!creatorId || !subscriberId || !rule) {
@@ -14,7 +14,8 @@ exports.createRule = async (req, res) => {
     const newRule = new Rule({
       creatorId,
       subscriberId,
-      rule
+      rule,
+      color: color || '#ffffff' 
     });
 
     await newRule.save();
@@ -23,6 +24,31 @@ exports.createRule = async (req, res) => {
     await schedulerApi.scheduleJob(newRule);
 
     res.status(201).json(newRule);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateRuleColor = async (req, res) => {
+  try {
+    const { color } = req.body;
+    const { id } = req.params;
+
+    if (!color) {
+      return res.status(400).json({ error: 'Color is required' });
+    }
+
+    const updatedRule = await Rule.findByIdAndUpdate(
+      id,
+      { color },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedRule) {
+      return res.status(404).json({ error: 'Rule not found' });
+    }
+
+    res.status(200).json({ message: 'Rule color updated successfully', rule: updatedRule });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -130,11 +156,12 @@ exports.getRuleById = async (req, res) => {
 // Update a rule by ID
 exports.updateRule = async (req, res) => {
   try {
-    const { creatorId, subscriberId, rule } = req.body;
     
+    const { creatorId, subscriberId, rule, color } = req.body;
+
     const updatedRule = await Rule.findByIdAndUpdate(
       req.params.id,
-      { creatorId, subscriberId, rule },
+      { creatorId, subscriberId, rule, color },
       { new: true, runValidators: true }
     );
 

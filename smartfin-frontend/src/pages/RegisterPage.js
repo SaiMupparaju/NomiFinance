@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate , Link} from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 function RegisterPage() {
@@ -125,6 +125,11 @@ function RegisterPage() {
                     <button type="submit" className="btn btn-primary w-100 mb-3">Register</button>
 
                 </form>
+
+                {/* Add the "Already have an account?" text with a login link */}
+                <div className="text-center mt-3">
+                    Already have an account? <Link to="/login">Login</Link>
+                </div>
             </div>
         </div>
     );

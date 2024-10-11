@@ -42,7 +42,7 @@ useEffect(() => {
       type: 'Notify Text',
       params: {
         recipients: ['1234567890'],
-        message: 'This is a preset message.',
+        message: 'Your notification message here',
       },
     };
     setEvent(presetEvent);

@@ -12,6 +12,7 @@ router.delete('/rules/:id', ruleController.deleteRule);
 router.put('/:id/jobId', ruleController.updateRuleJobId);
 router.put('/:id/activate', ruleController.activateRule);
 router.put('/:id/deactivate', ruleController.deactivateRule);
+router.put('/:id/color', ruleController.updateRuleColor);
 
 
 module.exports = router;
