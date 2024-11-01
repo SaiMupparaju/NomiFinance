@@ -21,11 +21,11 @@ function LandingPage() {
     navigate("/home");  // Navigate to the home page for guest users
   };
 
-  // useEffect(() => {
-  //   if(auth.user){
-  //     navigate("/home");
-  //   }
-  // }, [auth])
+  useEffect(() => {
+    if(auth.user){
+      navigate("/home");
+    }
+  }, [auth])
 
   return (
     <div className="container d-flex justify-content-center align-items-center vh-100 position-relative">

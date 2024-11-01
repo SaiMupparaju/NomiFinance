@@ -9,6 +9,17 @@ const createUser = catchAsync(async (req, res) => {
   res.status(httpStatus.CREATED).send(user);
 });
 
+const getUserProfile = catchAsync(async (req, res) => {
+  // The authenticated user's ID is available in req.user.id
+  const user = await userService.getUserById(req.user.id);
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  res.status(httpStatus.OK).send(user);
+});
+
 const getUsers = catchAsync(async (req, res) => {
   const filter = pick(req.query, ['name', 'role']);
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
@@ -54,4 +65,5 @@ module.exports = {
   updateUser,
   deleteUser,
   getPlaidToken,
+  getUserProfile,
 };

@@ -6,9 +6,9 @@ import axiosInstance from '../../utils/axiosInstance';
 import Swal from 'sweetalert2'; // Import SweetAlert2
 import withReactContent from 'sweetalert2-react-content';
 import { SketchPicker } from 'react-color';
-import { FaPalette } from 'react-icons/fa'; 
+import { FaPalette, FaTrash } from 'react-icons/fa'; 
 
-function RuleCard({ rule, onToggle }) {
+function RuleCard({ rule, onToggle, activeRulesCount, subscriptionLimit, onDelete}) {
     const [isActive, setIsActive] = useState(rule.isActive || false);
     const navigate = useNavigate();
     const { auth } = useAuth(); // Get auth context
@@ -38,6 +38,16 @@ function RuleCard({ rule, onToggle }) {
     const handleToggle = async (checked) => {
       const action = checked ? 'activate' : 'deactivate';
 
+      if (checked && activeRulesCount >= subscriptionLimit) {
+        await MySwal.fire({
+          title: 'Subscription Limit Reached',
+          text: `You have reached the limit of ${subscriptionLimit} active rules for your subscription. Please deactivate another rule or upgrade your subscription.`,
+          icon: 'warning',
+          confirmButtonText: 'OK',
+        });
+        setIsActive(false);
+        return;
+      }
       // Show SweetAlert2 confirmation dialog
       MySwal.fire({
         title: `Are you sure?`,
@@ -91,26 +101,62 @@ function RuleCard({ rule, onToggle }) {
       const cond = rule.rule;
       navigate(`/edit-rule/${rule._id}`, { state: { cond } });
     };
+
+    const handleDelete = () => {
+      // Show SweetAlert2 confirmation dialog
+      MySwal.fire({
+        title: `Delete Rule`,
+        text: `Are you sure you want to delete this rule? This action cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: `Yes, delete it!`,
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            const response = await axiosInstance.delete(`/rules/${rule._id}`);
+  
+            if (response.status === 200) {
+              // Notify parent component to remove this rule from the list
+              onDelete(rule._id);
+              MySwal.fire('Deleted!', 'Your rule has been deleted.', 'success');
+            } else {
+              MySwal.fire('Error!', 'Failed to delete rule.', 'error');
+            }
+          } catch (error) {
+            console.error('Error deleting rule:', error);
+            MySwal.fire('Error!', 'An error occurred while deleting the rule.', 'error');
+          }
+        }
+      });
+    };
   
     return (
       <div className="card w-100 rounded" style={{ backgroundColor: color }}>
         <div className="card-body d-flex flex-column">
           <div className="d-flex justify-content-between align-items-start">
             <h5 className="card-title">{rule.rule.name}</h5>
-            <div className="color-picker-container" style={{ position: 'relative' }}>
-              <FaPalette
-                style={{ cursor: 'pointer' }}
-                onClick={() => setShowColorPicker(!showColorPicker)}
+            <div className="d-flex align-items-center">
+              <FaTrash
+                style={{ cursor: 'pointer', marginRight: '10px', color: 'grey' }}
+                onClick={handleDelete}
               />
-              {showColorPicker && (
-                <div style={{ position: 'absolute', zIndex: 2, right: 0 }}>
-                  <div
-                    style={{ position: 'fixed', top: 0, left: 0, bottom: 0, right: 0 }}
-                    onClick={() => setShowColorPicker(false)}
-                  />
-                  <SketchPicker color={color} onChangeComplete={handleColorChange} />
-                </div>
-              )}
+              <div className="color-picker-container" style={{ position: 'relative' }}>
+                <FaPalette
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setShowColorPicker(!showColorPicker)}
+                />
+                {showColorPicker && (
+                  <div style={{ position: 'absolute', zIndex: 2, right: 0 }}>
+                    <div
+                      style={{ position: 'fixed', top: 0, left: 0, bottom: 0, right: 0 }}
+                      onClick={() => setShowColorPicker(false)}
+                    />
+                    <SketchPicker color={color} onChangeComplete={handleColorChange} />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="mt-auto d-flex justify-content-between align-items-center">

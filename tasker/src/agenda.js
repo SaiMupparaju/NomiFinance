@@ -13,7 +13,7 @@ const { DateTime } = require('luxon');
 
 // Define the job for executing rules
 
-function calculateNextRunTime(schedule) {
+function calculateNextRunTime(schedule, ruleEvaluatedTrueToday = false) {
   const {
     frequency,
     date,
@@ -26,6 +26,73 @@ function calculateNextRunTime(schedule) {
 
   // Current time in the desired timeZone
   const now = DateTime.now().setZone(timeZone);
+
+  if (frequency === 'ontruth') {
+
+    const ontruthTimes = [
+      { hour: 9, minute: 0 },
+      { hour: 12, minute: 0 },
+      { hour: 15, minute: 0 },
+      { hour: 18, minute: 0 },
+    ];
+
+    // Check if the rule evaluated to true today
+    //let ruleEvaluatedTrueToday = false;
+    // if (lastEvaluatedTrueDate) {
+    //   const lastTrueDate = DateTime.fromJSDate(lastEvaluatedTrueDate).setZone(timeZone);
+    //   ruleEvaluatedTrueToday = lastTrueDate.hasSame(now, 'day');
+    // }
+
+    if (ruleEvaluatedTrueToday) {
+      // Schedule for tomorrow at the earliest time
+      const earliestTime = ontruthTimes[0];
+      let nextRun = now.plus({ days: 1 }).set({
+        hour: earliestTime.hour,
+        minute: earliestTime.minute,
+        second: 0,
+        millisecond: 0,
+      });
+
+      return nextRun.toUTC().toJSDate();
+    }
+
+    // Find the next run time among the fixed times
+    let nextTimes = ontruthTimes.map((time) => {
+      let nextRun = now.set({
+        hour: time.hour,
+        minute: time.minute,
+        second: 0,
+        millisecond: 0,
+      });
+
+      // If the time has already passed today, schedule for the next available time
+      if (nextRun <= now) {
+        nextRun = nextRun.plus({ days: 1 });
+      }
+
+      return nextRun;
+    });
+
+    // Filter out times that have already passed today
+    nextTimes = nextTimes.filter((time) => time > now);
+
+    if (nextTimes.length === 0) {
+      // All times have passed today, schedule for tomorrow at the earliest time
+      const earliestTime = ontruthTimes[0];
+      let nextRun = now.plus({ days: 1 }).set({
+        hour: earliestTime.hour,
+        minute: earliestTime.minute,
+        second: 0,
+        millisecond: 0,
+      });
+
+      return nextRun.toUTC().toJSDate();
+    } else {
+      // Schedule for the next available time today
+      const nextRun = nextTimes.sort((a, b) => a - b)[0];
+      return nextRun.toUTC().toJSDate();
+    }
+  }
 
   if (frequency === 'once') {
     // Parse the date provided by the user
@@ -271,7 +338,8 @@ agenda.define('execute rule', async (job) => {
     // Run the engine (fact values will be fetched dynamically when needed)
     const result = await engine.run();
 
-    if (result.events && result.events.length > 0) {
+    const ruleEvaluatedTrue = result.events && result.events.length > 0;
+    if (ruleEvaluatedTrue) {
       console.log('Rule evaluated to TRUE. Events:', result.events);
 
       // **Handle Notifications:**
@@ -300,7 +368,7 @@ agenda.define('execute rule', async (job) => {
     }
 
     // Calculate and reschedule the next job run
-    const nextRunTime = calculateNextRunTime(ruleMongObj.rule.schedule);
+    const nextRunTime = calculateNextRunTime(ruleMongObj.rule.schedule, ruleEvaluatedTrueToday=ruleEvaluatedTrue);
     if (nextRunTime) {
       job.schedule(nextRunTime); // Reschedule the job
       await job.save(); // Save the updated job
@@ -320,7 +388,7 @@ agenda.on('ready', async () => {
   console.log("Agenda started up testing next date function...");
 
   const sched = {
-    frequency: "daily",
+    frequency: "ontruth",
     timeZone: "America/Los_Angeles", // Desired time zone
     userLocalTimeZone: "America/New_York", // User's local time zone
     weeklyTimes: [
@@ -341,7 +409,7 @@ agenda.on('ready', async () => {
   const timeZone = sched.timeZone;
   const now = DateTime.now().setZone(timeZone);
 
-  let nextRunTime = calculateNextRunTime(sched);
+  let nextRunTime = calculateNextRunTime(sched, lastEvaluatedTrueDate=true);
 
   if (nextRunTime) {
     // Convert nextRunTime to a JavaScript Date object in UTC

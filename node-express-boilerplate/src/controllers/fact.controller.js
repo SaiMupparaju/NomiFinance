@@ -60,12 +60,14 @@ const getStartDate = (timeframe) => {
       return moment().subtract(1, 'month').startOf('day');
     case 'since_1_week':
       return moment().subtract(1, 'week').startOf('day');
+    case 'since_1_month':
+      return moment().subtract(1, 'month').startOf('day');
     case 'since_1_year':
       return moment().subtract(1, 'year').startOf('day');
     case 'since_ytd':
       return moment().startOf('year');
     default:
-      return moment().subtract(1, 'month').startOf('day'); // Default to last month
+      throw new Error(`Invalid timeframe: ${timeframe}`);
   }
 };
 
@@ -103,20 +105,61 @@ const convertToUSD = async (value, currency) => {
     throw new Error('Currency conversion failed.');
   }
 };
+
+const isIncomeTransaction = (transaction, incomeType, params) => {
+  const { personal_finance_category: pfc } = transaction;
+
+  if (!pfc) return false;
+
+  if (pfc.primary !== 'INCOME') {
+    return false;
+  }
+
+  if (incomeType === 'total') {
+    return true;
+  } else if (incomeType === 'from') {
+    return params.incomes.includes(pfc.detailed);
+  }
+
+  return false;
+};
+
+const calculateIncome = async (account, params, timeframe, incomeType) => {
+  try {
+    const transactions = account.transactions;
+
+    const startDate = getStartDate(timeframe);
+
+    const totalIncome = transactions.reduce((sum, transaction) => {
+      const transactionDate = moment(transaction.date);
+
+      if (transactionDate.isAfter(startDate) && isIncomeTransaction(transaction, incomeType, params)) {
+        return sum + (transaction.amount > 0 ? transaction.amount : 0);
+      }
+      return sum;
+    }, 0);
+
+    return totalIncome;
+  } catch (error) {
+    console.error(`Error in calculateIncome for account ${account.accountId}:`, error);
+    throw new Error('Failed to calculate income');
+  }
+};
+
+
 /*
 In this function we pass in the userId, the factString, and any potential params to find the 
 */
 exports.getFactValue = async (userId, factString, params) => {
   try {
-    console.log("getFactValue", userId, factString, params);
+    //console.log("getFactValue", userId, factString, params);
 
     if (factString === "custom_value") {
       // Check for currency in params; default to USD if not provided
       const currency = params?.currency || "USD";
 
-      // Ensure that a customValue exists in params
-      if (!params?.customValue) {
-        throw new Error('Custom value is required for "Custom Value" fact.');
+      if (params.customValue === null || params.customValue === undefined) {
+        params.customValue = 0;
       }
 
       // Convert the custom value to USD using the skeleton function
@@ -125,7 +168,16 @@ exports.getFactValue = async (userId, factString, params) => {
       return convertedValue;
     }
     // Split the fact string into its components (e.g., "bank_of_america/plaid_checking_0000/balances")
-    const [factBankName, factAccountString, property, subProperty] = factString.split('/');
+    const tokens = factString.split('/');
+    if (tokens.length < 4) {
+      throw new Error('Invalid fact string format.');
+    }
+
+    const factBankName = tokens[0];
+    const factAccountString = tokens[1];
+    const property = tokens[2]; 
+    const subProperty = tokens[3];
+    //    const [factBankName, factAccountString, property, subProperty] = factString.split('/');
 
     if (!factBankName || !factAccountString || !property) {
       throw new Error('Invalid fact string format.');
@@ -139,14 +191,14 @@ exports.getFactValue = async (userId, factString, params) => {
     const accountMask = factAccountString.slice(-4); // Last 4 characters represent the mask
 
     // Fetch the account from the database based on bank name, account name, and mask
-    console.log("account query:", userId, bankName, accountName, accountMask);
+    //console.log("account query:", userId, bankName, accountName, accountMask);
     const account = await BankAccount.findOne({
       userId: userId,
       bankName: bankName,
       accountName: accountName,
       mask: accountMask,
     });
-    console.log("fetched account", account);
+    //console.log("fetched account", account);
 
     if (!account) {
       throw new Error(`Account not found for user ID ${userId}, bank name ${bankName}, account name ${accountName} with mask {${accountMask}}.`);
@@ -157,7 +209,7 @@ exports.getFactValue = async (userId, factString, params) => {
       if (!subProperty || !accountPropertyMapping[subProperty]) {
         throw new Error(`Invalid sub-property for balances: ${subProperty}`);
       }
-      console.log("Returning account property with subproperty", subProperty, account.balances[subProperty]);
+      //console.log("Returning account property with subproperty", subProperty, account.balances[subProperty]);
       return account.balances[subProperty]; // Return the balance property
     }
 
@@ -172,6 +224,34 @@ exports.getFactValue = async (userId, factString, params) => {
       return totalExpenses;
     }
 
+    if (property === 'income') {
+      if (tokens.length < 5) {
+        throw new Error('Invalid fact string format for income.');
+      }
+    
+      const incomeType = tokens[3]; // 'total' or 'from'
+      const timeframe = tokens[4]; // 'since_1_week', etc.
+    
+      if (!incomeType || !timeframe) {
+        throw new Error('Invalid fact string format for income.');
+      }
+    
+      if (incomeType === 'total') {
+        // Calculate total income
+        const totalIncome = await calculateIncome(account, params, timeframe, 'total');
+        return totalIncome;
+      } else if (incomeType === 'from') {
+        if (!params || !params.incomes || !Array.isArray(params.incomes) || params.incomes.length === 0) {
+          throw new Error('Incomes are required to calculate income from specific sources.');
+        }
+        // Calculate income from specific sources
+        const totalIncome = await calculateIncome(account, params, timeframe, 'from');
+        return totalIncome;
+      } else {
+        throw new Error(`Invalid income type: ${incomeType}`);
+      }
+    }
+
     throw new Error(`Unsupported property type: ${property}`);
 
   } catch (error) {
@@ -183,7 +263,7 @@ exports.getFactValue = async (userId, factString, params) => {
 
 
 const generateFacts = (bankAccounts) => {
-  console.log("Generating facts");
+  //console.log("Generating facts");
   const facts = {};
 
   Object.keys(bankAccounts).forEach((bankName) => {
@@ -209,7 +289,7 @@ exports.getUserFacts = async (req, res) => {
   try {
     // Fetch bank accounts using the refactored fetchAccounts function
     const bankAccounts = await fetchAccounts(userId);
-    console.log("bank accounts:", bankAccounts);
+    //console.log("bank accounts:", bankAccounts);
     
     if (!bankAccounts || bankAccounts.length === 0) {
       return res.status(404).json({ error: 'No bank accounts found for this user' });
@@ -229,7 +309,7 @@ exports.getFactTree = async (req, res) => {
     console.log("User ID:", userId);
 
     const bankAccounts = await fetchAccounts(userId);
-    console.log("Fetched bank accounts:", JSON.stringify(bankAccounts, null, 2));
+    //console.log("Fetched bank accounts:", JSON.stringify(bankAccounts, null, 2));
 
     if (!bankAccounts || bankAccounts.length === 0) {
       console.log("No bank accounts found for this user.");
@@ -237,7 +317,7 @@ exports.getFactTree = async (req, res) => {
     }
 
     const factTree = getFactTree(bankAccounts);
-    console.log("Generated fact tree:", JSON.stringify(factTree, null, 2));
+    //console.log("Generated fact tree:", JSON.stringify(factTree, null, 2));
     
     res.status(200).json(factTree);
   } catch (error) {
@@ -265,6 +345,11 @@ const getFactTree = (bankAccounts) => {
     { label: 'Since Y2D', value: 'since_ytd'},
   ];
 
+  const incomes = [
+    {label: 'Total', value: 'total', children: timings},
+    {label: 'From', value: 'from', children: timings}
+  ]
+
   try {
     // Iterate over each bank in the bankAccounts object
     Object.keys(bankAccounts).forEach(bankName => {
@@ -291,6 +376,7 @@ const getFactTree = (bankAccounts) => {
                 { label: 'Available', value: 'available' },
               ]},
               { label: 'Expenses', value: 'expenses', children: timings },
+              { label: 'Income', value: 'income', children: incomes}
             ]
           };
 

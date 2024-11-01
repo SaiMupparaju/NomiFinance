@@ -8,7 +8,7 @@ const { getBankNameByAccessToken } = require('../services/BankAccountService');
 const PLAID_CLIENT_ID = "66ef2c652ac9d100192cbf71";
 const PLAID_SECRET = "e1c8e85fbf43877ab29e9147b7d4b2";
 const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
-const WEBHOOK = "https://ffa8-75-102-136-103.ngrok-free.app" //FIXME
+const WEBHOOK = "https://9fcd-70-106-217-26.ngrok-free.app" //FIXME
 
 const configuration = new Configuration({
   basePath: PlaidEnvironments[PLAID_ENV],
@@ -183,7 +183,7 @@ const getUpdateLinkToken = async function (req, response) {
 
       const existingToken = await LinkToken.findOne({ userId: clientUserId }).sort({ createdAt: -1 });
       if (existingToken) {
-        console.log('Returning existing link token for user:', clientUserId);
+        //console.log('Returning existing link token for user:', clientUserId);
         return response.json({ link_token: existingToken.linkToken });
       }
 
@@ -272,6 +272,7 @@ const saveOrUpdateAccount = async (accountData) => {
   }
 };
 
+//build out a cache here
 const fetchAccounts = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -284,81 +285,28 @@ const fetchAccounts = async (userId) => {
       throw new Error(`No Plaid access tokens found for user ID ${userId}.`);
     }
 
-    // const allUserBankAccounts = await BankAccount.find({ userId });
-    // const numberOfBankAccounts = allUserBankAccounts.length;
-    // let userAccountSummary = await UserAccountSummary.findOne({ userId });
-    // const oneHourAgo = new Date(Date.now() - 1000 * 60 * 60);
-
-    // if (
-    //   userAccountSummary &&
-    //   userAccountSummary.lastUpdated >= oneHourAgo &&
-    //   userAccountSummary.numberOfBankAccounts === numberOfBankAccounts
-    // ) {
-    //   console.log('Returning cached account summary from UserAccountSummary');
-    //   return userAccountSummary.summary; // Return the cached summary
-    // }
-
-    console.log("Fetching new data from Plaid...");
     let bankAccounts = {};
 
     for (const accessToken of user.plaidAccessTokens) {
       try {
-        const request = {
-          access_token: accessToken,
-        };
+        // Fetch accounts from Plaid
+        const accountsResponse = await plaidClient.accountsGet({ access_token: accessToken });
+        const accounts = accountsResponse.data.accounts;
+        const item = accountsResponse.data.item;
 
-        const plaidResponse = await plaidClient.accountsGet(request);
-        if (!plaidResponse || !plaidResponse.data) {
-          throw new Error('Invalid response from Plaid API when fetching accounts.');
-        }
-
-        const accounts = plaidResponse.data.accounts;
-        const item = plaidResponse.data.item;
-
-
-        console.log("fetching transactions");
-        // Fetch transactions for all accounts associated with this access token
-        const transactionsRequest = {
-          access_token: accessToken,
-          start_date: '2023-01-01',  // Example start date, adjust as needed
-          end_date: new Date().toISOString().split('T')[0], // Today's date as end date
-        };
-
-        const transactionsResponse = await plaidClient.transactionsGet(transactionsRequest);
-        if (!transactionsResponse || !transactionsResponse.data) {
-          throw new Error('Invalid response from Plaid API when fetching transactions.');
-        }
-
-        const transactions = transactionsResponse.data.transactions;
-
-        // Organize transactions by account_id for easier assignment later
-        const transactionsByAccount = transactions.reduce((acc, transaction) => {
-          if (!acc[transaction.account_id]) {
-            acc[transaction.account_id] = [];
-          }
-          acc[transaction.account_id].push(transaction);
-          return acc;
-        }, {});
-
-        const institutionRequest = {
+        // Get bank name from Plaid
+        const institutionResponse = await plaidClient.institutionsGetById({
           institution_id: item.institution_id,
-          country_codes: ['US'],  // Or other country codes as appropriate
-        };
-
-        const institutionResponse = await plaidClient.institutionsGetById(institutionRequest);
-        if (!institutionResponse || !institutionResponse.data) {
-          throw new Error('Invalid response from Plaid API when fetching institution data.');
-        }
-
+          country_codes: ['US'],
+        });
         const bankName = institutionResponse.data.institution.name;
 
         for (const account of accounts) {
-          try {
-            // Attach transactions to the account object
-            account.transactions = transactionsByAccount[account.account_id] || [];
-
-            // Prepare the data to be saved
-            const accountData = {
+          // Find or create the BankAccount in your database
+          let bankAccount = await BankAccount.findOne({ accountId: account.account_id, userId });
+          if (!bankAccount) {
+            // If account doesn't exist in DB, create it
+            bankAccount = new BankAccount({
               accountId: account.account_id,
               userId: userId,
               bankName: bankName,
@@ -368,56 +316,92 @@ const fetchAccounts = async (userId) => {
               type: account.type,
               balances: account.balances,
               accessToken: accessToken,
-              userToken: user.plaidUserToken, // Assuming userToken is stored in the user model
-              transactions: account.transactions,
-              needsUpdate: false,
-            };
-
-            // Use the saveOrUpdateAccount function to handle the database operation
-            await saveOrUpdateAccount(accountData);
-
-            if (!bankAccounts[bankName]) {
-              bankAccounts[bankName] = [];
-            }
-            bankAccounts[bankName].push(account);
-          } catch (accountError) {
-            console.error(`Error processing account ${account.account_id}:`, accountError);
+              userToken: user.plaidUserToken,
+              transactions: [],
+              lastTransactionFetch: null,
+            });
+          } else {
+            // Update account details if necessary
+            bankAccount.balances = account.balances;
+            bankAccount.mask = account.mask;
+            bankAccount.subtype = account.subtype;
+            bankAccount.type = account.type;
           }
+
+          // Check if we need to fetch transactions
+          const now = new Date();
+          const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+          if (!bankAccount.lastTransactionFetch || bankAccount.lastTransactionFetch < fourHoursAgo) {
+            console.log(`Fetching transactions for account ${account.account_id}`);
+
+            // Fetch transactions from Plaid
+            const startDate = '2023-01-01'; // Adjust as needed
+            const endDate = now.toISOString().split('T')[0];
+            const transactionsResponse = await plaidClient.transactionsGet({
+              access_token: accessToken,
+              start_date: startDate,
+              end_date: endDate,
+              options: { account_ids: [account.account_id] },
+            });
+
+            const transactions = transactionsResponse.data.transactions;
+
+            // Update transactions and timestamp
+            bankAccount.transactions = transactions;
+            bankAccount.lastTransactionFetch = now;
+          } else {
+            console.log(`Using cached transactions for account ${account.account_id}`);
+          }
+
+          // Save the bank account
+          await bankAccount.save();
+
+          // Prepare data for response
+          const accountData = {
+            ...account,
+            bankName: bankName,
+            transactions: bankAccount.transactions,
+          };
+
+          if (!bankAccounts[bankName]) {
+            bankAccounts[bankName] = [];
+          }
+          bankAccounts[bankName].push(accountData);
         }
       } catch (plaidError) {
-        // Handle specific errors that require user action (e.g., ITEM_LOGIN_REQUIRED)
-        if (plaidError.response && plaidError.response.data && plaidError.response.data.error_code) {
-          const errorCode = plaidError.response.data.error_code;
-          
-          // If the error code is ITEM_LOGIN_REQUIRED or PENDING_EXPIRATION, flag it
-          if (errorCode === 'ITEM_LOGIN_REQUIRED' || errorCode === 'PENDING_EXPIRATION') {
-
-
-            const bankName = await getBankNameByAccessToken(accessToken, userId);
-
-            // Mark the bank with `needsUpdate` status
-            bankAccounts[bankName] = [{
-              bankName: bankName,
-              needsUpdate: true,
-              error: plaidError.response.data.error_message,
-            }];
-          } else {
-            console.error(`Unhandled Plaid error: ${plaidError.response.data.error_message}`);
-          }
-        } else {
-          console.error(`Error fetching accounts with access token ${accessToken}:`, plaidError);
-        }
+        // Handle Plaid-specific errors
+        await handlePlaidError(plaidError, accessToken, userId, bankAccounts);
       }
     }
-
-    console.log("fetchAccounts: bank accounts", bankAccounts);
 
     return bankAccounts;
   } catch (error) {
     console.error(`Error fetching accounts for user ID ${userId}:`, error);
-    throw new Error("Failed to fetch accounts");
+    throw new Error('Failed to fetch accounts');
   }
 };
+
+
+async function handlePlaidError(plaidError, accessToken, userId, bankAccounts) {
+  if (plaidError.response && plaidError.response.data && plaidError.response.data.error_code) {
+    const errorCode = plaidError.response.data.error_code;
+
+    if (errorCode === 'ITEM_LOGIN_REQUIRED' || errorCode === 'PENDING_EXPIRATION') {
+      const bankName = await getBankNameByAccessToken(accessToken, userId);
+
+      // Mark the bank with `needsUpdate` status
+      bankAccounts[bankName] = [{
+        bankName: bankName,
+        needsUpdate: true,
+        error: plaidError.response.data.error_message,
+      }];
+    } else {
+      console.error(`Unhandled Plaid error: ${plaidError.response.data.error_message}`);
+    }
+  } else {
+    console.error(`Error fetching accounts with access token ${accessToken}:`, plaidError);
+  }
+}
 
 const getAccounts = async (req, res) => {
   console.log("gettting Accounts");
@@ -476,15 +460,9 @@ const handlePlaidWebhook = async (req, res) => {
 };
 
 
-const getTransactions = async (userId, factBankName, factAccountString) => {
+const getTransactions = async (userId, bankName, accountName) => {
   try {
-    // Normalize the bankName from fact string (e.g., "bank_of_america" -> "Bank Of America")
-    const bankName = factBankName; 
-    const accountName = factAccountString;
-    // Extract the account name and mask from the factAccountString
-
-
-    // Fetch the BankAccount document associated with the user, bank name, account name, and mask
+    // Fetch the BankAccount document
     const account = await BankAccount.findOne({
       userId: userId,
       bankName: bankName,
@@ -492,40 +470,51 @@ const getTransactions = async (userId, factBankName, factAccountString) => {
     });
 
     if (!account) {
-      throw new Error(`No account found for user ID ${userId}, bank name ${bankName}, and account name ${accountName} with mask {${accountMask}}.`);
+      throw new Error(`No account found for user ID ${userId}, bank name ${bankName}, and account name ${accountName}.`);
     }
 
-    const accessToken = account.accessToken;
-    if (!accessToken) {
-      throw new Error(`Access token not found for account ${accountName} with mask {${accountMask}} in bank ${bankName}.`);
-    }
+    // Check if we need to fetch transactions
+    const now = new Date();
+    const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+    let transactions = account.transactions;
 
-    // Set the date range for the last year
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setFullYear(endDate.getFullYear() - 1);
+    if (!account.lastTransactionFetch || account.lastTransactionFetch < fourHoursAgo) {
+      console.log(`Fetching transactions for account ${account.accountId}`);
 
-    // Fetch transactions for the specified account from the last year
-    const transactionsRequest = {
-      access_token: accessToken,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
-      account_ids: [account.accountId],
-    };
+      const accessToken = account.accessToken;
+      if (!accessToken) {
+        throw new Error(`Access token not found for account ${accountName} in bank ${bankName}.`);
+      }
 
-    const transactionsResponse = await plaidClient.transactionsGet(transactionsRequest);
-    const transactions = transactionsResponse.data.transactions;
+      // Set the date range
+      const endDate = now.toISOString().split('T')[0];
+      const startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
 
-    if (!transactions || transactions.length === 0) {
-      throw new Error('No transactions found for the specified account.');
+      // Fetch transactions from Plaid
+      const transactionsResponse = await plaidClient.transactionsGet({
+        access_token: accessToken,
+        start_date: startDate,
+        end_date: endDate,
+        options: { account_ids: [account.accountId] },
+      });
+
+      transactions = transactionsResponse.data.transactions;
+
+      // Update transactions and timestamp
+      account.transactions = transactions;
+      account.lastTransactionFetch = now;
+      await account.save();
+    } else {
+      console.log(`Using cached transactions for account ${account.accountId}`);
     }
 
     return transactions;
   } catch (error) {
-    console.error(`Error fetching transactions for user ID ${userId}, bank name ${bankName}, account name ${accountName} with mask {${accountMask}}:`, error);
+    console.error(`Error fetching transactions for user ID ${userId}, bank name ${bankName}, account name ${accountName}:`, error);
     throw new Error('Failed to fetch transactions');
   }
 };
+
 
 
   module.exports = {

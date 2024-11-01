@@ -27,7 +27,16 @@ const ruleSchema = new mongoose.Schema({
   color: {
     type: String,
     default: '#ffffff' // Default color (white)
+  },
+  lastUpdated: {
+    type: Date,
+    default: Date.now // Automatically set to the current date
   }
+});
+
+ruleSchema.pre('save', function(next) {
+  this.lastUpdated = Date.now();
+  next();
 });
   
 

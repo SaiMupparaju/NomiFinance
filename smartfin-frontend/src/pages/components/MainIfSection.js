@@ -2,14 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button, Container, Dropdown } from 'react-bootstrap';
 import IfSection from './IfSection';
 import Swal from 'sweetalert2';
+import axiosInstance from '../../utils/axiosInstance';
 import '../styles/IfSection.css';
 //import { fetchBankAccounts } from '../../utils/plaid_api';
 import { generateFacts } from '../../utils/FactGenerator';
+import {useAuth} from "../../contexts/AuthContext";
 
 
 function MainIfSection({ onConditionsChange, conditions, accountProperties, setMainIfIsValid }) {
   const [mainOP, setMainOP] = useState("all");
   const initializedRef = useRef(false);
+
+  const {auth} = useAuth();
   
   const [ifSections, setIfSections] = useState({
     conditions: {
@@ -254,6 +258,32 @@ function MainIfSection({ onConditionsChange, conditions, accountProperties, setM
       }
     });
   };
+
+  const handleCustomizeClick = () => {
+    Swal.fire({
+      title: 'Feature Request',
+      input: 'textarea',
+      inputLabel: 'Let us know what features you\'d like to see in the future',
+      inputPlaceholder: 'Type your suggestion here...',
+      inputAttributes: {
+        'aria-label': 'Type your suggestion here'
+      },
+      showCancelButton: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const suggestion = result.value;
+        // Send the suggestion to the backend API
+        axiosInstance.post('/suggest/api/suggestions', { suggestion })
+          .then(response => {
+            Swal.fire('Thank you!', 'Your suggestion has been submitted.', 'success');
+          })
+          .catch(error => {
+            Swal.fire('Error', 'There was an error submitting your suggestion. Please try again later.', 'error');
+            console.error('Error submitting suggestion:', error);
+          });
+      }
+    });
+  };
   
   return (
     <div className="if-section p-3 mb-3 bg-light border rounded">
@@ -264,9 +294,11 @@ function MainIfSection({ onConditionsChange, conditions, accountProperties, setM
         <Button variant="outline-secondary" className="me-2"  onClick={showComingSoonAlert}> 
           TIMER
         </Button>
-        <Button variant="outline-secondary"  onClick={showComingSoonAlert}>
-          DIRECT ORDER
+        {(auth.user) &&
+        <Button variant="outline-secondary"  onClick={handleCustomizeClick}>
+          CUSTOMIZE
         </Button>
+        }
       </div>
       <Container>
         {/* MAP though the IF STATEMENTS */}

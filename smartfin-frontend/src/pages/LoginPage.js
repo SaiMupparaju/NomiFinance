@@ -28,7 +28,7 @@ function LoginPage() {
     return (
         <div className="container d-flex justify-content-center align-items-center vh-100">
             <div className="w-100" style={{maxWidth: '400px'}}>
-                <h2 className="text-center mb-4">Login to FinSmart</h2>
+                <h2 className="text-center mb-4">Login to Nomi</h2>
                 {error && <div className="alert alert-danger">{error}</div>}
                 <form onSubmit={handleLogin} className="card p-4">
                     <div className="mb-3">

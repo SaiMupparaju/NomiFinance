@@ -9,15 +9,26 @@ function mapLookupKeyToPlan(lookupKey) {
   switch (lookupKey) {
     case 'single_monthly':
     case 'single_yearly':
-      return 'Nomi - Single';
+      return 'Nomi Single';
     case 'standard_monthly':
     case 'standard_yearly':
-      return 'Nomi - Standard';
+      return 'Nomi Standard';
     case 'premium_monthly':
     case 'premium_yearly':
-      return 'Nomi - Premium';
+      return 'Nomi Premium';
     default:
       return 'Unknown Plan';
+  }
+}
+
+function mapProductIdToPlan(productId) {
+  switch (productId) {
+    case "prod_R0auXMo4nOGFkM":
+      return 'Nomi Single'
+    case "prod_R22J6iyXBxcFLX":
+      return 'Nomi Standard'
+    case "prod_R0b23M9NcTgjfF":
+      return 'Nomi Premium'
   }
 }
 
@@ -72,7 +83,7 @@ async function handleSubscriptionEvent(subscription) {
       const lookupKey = subscriptionItem.price.lookup_key;
 
       // Map lookupKey to your subscription plan names
-      const subscriptionPlan = mapLookupKeyToPlan(lookupKey);
+      const subscriptionPlan = mapProductIdToPlan(productId);
 
       // Update user subscription details
       user.subscriptionStatus = status;
@@ -154,7 +165,7 @@ async function handleInvoicePaymentSucceeded(invoice) {
       const lookupKey = subscriptionItem.price.lookup_key;
 
       // Map lookupKey to your subscription plan names
-      const subscriptionPlan = mapLookupKeyToPlan(lookupKey);
+      const subscriptionPlan = mapProductIdToPlan(productId);
 
       // Update user subscription details
       user.subscriptionStatus = subscription.status;
@@ -191,7 +202,7 @@ async function handleInvoicePaymentFailed(invoice) {
       const lookupKey = subscriptionItem.price.lookup_key;
 
       // Map lookupKey to your subscription plan names
-      const subscriptionPlan = mapLookupKeyToPlan(lookupKey);
+      const subscriptionPlan = mapProductIdToPlan(productId);
 
       // Update user subscription details
       user.subscriptionStatus = 'past_due';
@@ -231,7 +242,7 @@ async function handleCheckoutSession(session) {
       const lookupKey = subscriptionItem.price.lookup_key;
 
       // Map lookupKey to your subscription plan names
-      const subscriptionPlan = mapLookupKeyToPlan(lookupKey);
+      const subscriptionPlan = mapProductIdToPlan(productId);
 
       // Update the user's Stripe information
       user.stripeCustomerId = customerId;

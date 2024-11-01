@@ -3,7 +3,6 @@
 import React from 'react';
 import { Button } from 'react-bootstrap';
 import { useAuth } from '../../../contexts/AuthContext';
-import axiosInstance from '../../../utils/axiosInstance';
 
 const PaymentInfo = () => {
   const { auth } = useAuth();
@@ -13,17 +12,9 @@ const PaymentInfo = () => {
     window.location.href = '/pricing';
   };
 
-  const handleManageSubscription = async () => {
-    try {
-      const response = await axiosInstance.post('/payment/create-billing-portal-session');
-      const { url } = response.data;
-      console.log("billing url", url);
-      // Redirect the user to the Stripe Billing Portal
-      window.location.href = url;
-    } catch (error) {
-      console.error('Error creating billing portal session:', error);
-      alert('Unable to load billing portal. Please try again later.');
-    }
+  const handleManageSubscription = () => {
+    // Redirect the user to the static billing portal link
+    window.location.href = 'https://billing.stripe.com/p/login/test_4gw9AB4FsdAJc80dQQ';
   };
 
   if (!auth.user) {
@@ -42,7 +33,9 @@ const PaymentInfo = () => {
         </div>
       ) : (
         <div>
-          <p>You are subscribed to the <strong>{auth.user.subscriptionPlan}</strong> plan.</p>
+          <p>
+            You are subscribed to the <strong>{auth.user.subscriptionPlan}</strong> plan.
+          </p>
           <Button variant="primary" onClick={handleManageSubscription}>
             Manage Subscription
           </Button>

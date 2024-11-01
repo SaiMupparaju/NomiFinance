@@ -5,10 +5,13 @@ import '../styles/IfSection.css';
 import Swal from 'sweetalert2';
 //import { fetchBankAccounts } from '../../utils/plaid_api';
 //import { generateFacts } from '../../utils/FactGenerator';
+import {useAuth} from "../../contexts/AuthContext";
+import axiosInstance from '../../utils/axiosInstance';
 
 function EditMainIfSection({ onConditionsChange, conditions, accountProperties }) {
   const [mainOP, setMainOP] = useState("all");
   const initializedRef = useRef(false);
+  const {auth} = useAuth();
   
   const [ifSections, setIfSections] = useState({
     conditions: {
@@ -102,6 +105,32 @@ function EditMainIfSection({ onConditionsChange, conditions, accountProperties }
 
     setIfSections(updatedSections); // Update the state with the new structure
     onConditionsChange(updatedSections); // Call the function to handle the updated conditions
+  };
+
+  const handleCustomizeClick = () => {
+    Swal.fire({
+      title: 'Feature Request',
+      input: 'textarea',
+      inputLabel: 'Let us know what features you\'d like to see in the future',
+      inputPlaceholder: 'Type your suggestion here...',
+      inputAttributes: {
+        'aria-label': 'Type your suggestion here'
+      },
+      showCancelButton: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const suggestion = result.value;
+        // Send the suggestion to the backend API
+        axiosInstance.post('/api/suggestions', { suggestion })
+          .then(response => {
+            Swal.fire('Thank you!', 'Your suggestion has been submitted.', 'success');
+          })
+          .catch(error => {
+            Swal.fire('Error', 'There was an error submitting your suggestion. Please try again later.', 'error');
+            console.error('Error submitting suggestion:', error);
+          });
+      }
+    });
   };
 
   const updateCondition = (sectionIndex, conditionIndex, key, value) => {
@@ -264,6 +293,7 @@ function EditMainIfSection({ onConditionsChange, conditions, accountProperties }
     });
   };
   
+  
 
   return (
     <div className="if-section p-3 mb-3 bg-light border rounded">
@@ -274,9 +304,11 @@ function EditMainIfSection({ onConditionsChange, conditions, accountProperties }
         <Button variant="outline-secondary" className="me-2" onClick={showComingSoonAlert}>
           TIMER
         </Button>
-        <Button variant="outline-secondary" onClick={showComingSoonAlert}>
-          DIRECT ORDER
+        {(auth.user) &&
+        <Button variant="outline-secondary"  onClick={handleCustomizeClick}>
+          CUSTOMIZE
         </Button>
+        }
       </div>
       <Container>
         {/* MAP though the IF STATEMENTS */}

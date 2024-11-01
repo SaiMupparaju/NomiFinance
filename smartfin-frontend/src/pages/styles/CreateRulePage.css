@@ -1,14 +1,7 @@
 .create-rule-container {
-  margin-top: 20px;
+  margin-top: 50px;
 }
 
-.if-section {
-  border: 1px solid #ddd;
-  padding: 20px;
-  margin-bottom: 20px;
-  border-radius: 5px;
-  position: relative;
-}
 
 .if-button {
   margin-right: 10px;
@@ -36,10 +29,53 @@
   bottom: 20px;
 }
 
-.execute-section,
-.go-section {
-  border: 1px solid #ddd;
-  padding: 20px;
-  margin-bottom: 20px;
+.accordion-button {
+  font-size: 2rem; /* Base font size for headers */
+  font-weight: bold;
+}
+
+/* Increase font size when the accordion is collapsed */
+.accordion-button.collapsed {
+  font-size: 2.5rem;
+}
+
+.accordion-item.iff-section {
+  border: 2px solid #FFD700; /* Gold color for better visibility */
+}
+
+.accordion-item.then-section {
+  border: 2px solid #007BFF; /* Bootstrap primary blue */
+}
+
+.accordion-item.execute-section {
+  border: 2px solid #DC3545; /* Bootstrap danger red */
+}
+
+.accordion-item.name-section {
+  border: 2px solid #28A745; /* Bootstrap success green */
+}
+
+/* Optional: Add some padding to the accordion item for better appearance */
+.accordion-item {
+  margin-bottom: 1rem;
   border-radius: 5px;
+}
+
+/* Adjust the accordion body padding */
+.accordion-body {
+  padding: 1rem 1.5rem;
+}
+
+/* Optional: Enhance the accordion headers */
+.accordion-header .accordion-button {
+  background-color: #ffffff;
+}
+
+/* Adjusting the border to include the header and body */
+.accordion-item .accordion-header {
+  border-bottom: none;
+}
+
+.accordion-item .accordion-body {
+  border-top: 1px solid rgba(0, 0, 0, 0.125);
 }

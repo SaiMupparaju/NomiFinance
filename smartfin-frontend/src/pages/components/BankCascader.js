@@ -11,6 +11,8 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
   const [customValue, setCustomValue] = useState(null); // Initialize as null
   const [selectedCurrency, setSelectedCurrency] = useState('USD'); // Default to USD
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [showIncomes, setShowIncomes] = useState(false);
+  const [selectedIncomes, setSelectedIncomes] = useState([]);
 
   const availableCategories = [
     { label: 'Transfers Out', value: 'TRANSFERS_OUT' },
@@ -29,6 +31,17 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
     { label: 'Rent/Utilities', value: 'RENT_AND_UTILITIES' },
   ];
 
+  const availableIncomes = [
+    { label: 'Dividends', value: 'INCOME_DIVIDENDS'},
+    { label: 'Interest', value: 'INCOME_INTEREST_EARNED'},
+    { label: 'Retirement Pension', value: 'INCOME_RETIREMENT_PENSION'},
+    { label: 'Tax Refund', value: 'INCOME_TAX_REFUND'},
+    { label: 'Unemployment', value: 'INCOME_UNEMPLOYMENT'},
+    { label: 'Wages (Including gigs)', value: 'INCOME_WAGES'},
+    { label: 'Misc. (Alimony, Social Security, etc.)', value: 'INCOME_OTHER_INCOME'}
+
+  ]
+
   const currencyOptions = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'INR', 'SGD', 'HKD'];
 
   useEffect(() => {
@@ -43,9 +56,18 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
         }
         setShowCategories(true);
         setCustomValue(null); // Ensure custom value is reset when categories are shown
+      } else if (valueArray.includes('income') && valueArray.includes('from')) {
+        // Handle income/from
+        if (params.incomes) {
+          setSelectedIncomes(params.incomes);
+        }
+        setShowIncomes(true);
+        setShowCategories(false);
+        setCustomValue(null);
+    
       } else if (valueArray.includes('custom_value')) {
         // Handle custom value scenario
-        if (params.customValue) {
+        if (params.customValue !== undefined && params.customValue !== null) {
           setCustomValue(params.customValue);
         }
         setSelectedCurrency(params.currency || 'USD');
@@ -66,7 +88,12 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
     if (valueArray.includes('expenses')) {
       setShowCategories(true);
       setCustomValue(null); // Clear custom value when switching to categories
-        
+    } else if (valueArray.includes('income') && valueArray.includes('from')) {
+        setShowIncomes(true);
+        setShowCategories(false);
+        setCustomValue(null);
+        setSelectedCategories([]);
+      
     } else if (valueArray.includes('custom_value')) {
       setShowCategories(false); // Hide categories
       setSelectedCategories([]); // Clear selected categories
@@ -75,6 +102,22 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
       setShowCategories(false);
       setCustomValue(null);
     }
+  };
+
+  const handleIncomeChange = (value) => {
+    setSelectedIncomes(value);
+    handleConfirm();
+  
+    // Update incomes in params
+    if (prop === 'value') {
+      updateCondition(sectionIndex, conditionIndex, `${prop}.params`, { incomes: value });
+    } else {
+      updateCondition(sectionIndex, conditionIndex, 'params', { incomes: value });
+    }
+  
+    // Clear custom value and selected categories
+    setCustomValue(null);
+    setSelectedCategories([]);
   };
 
   const handleCategoryChange = (value) => {
@@ -99,16 +142,15 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
   const handleCustomValueChange = (value) => {
     setCustomValue(value);
     handleConfirm();
-
-    // Automatically update custom value in params
+  
+    // Automatically update custom value in params, keeping 0 if needed
     if (prop === 'value') {
-      updateCondition(sectionIndex, conditionIndex, `${prop}.params`, { customValue: value , currency: selectedCurrency});
+      updateCondition(sectionIndex, conditionIndex, `${prop}.params`, { customValue: value , currency: selectedCurrency });
     } else {
       updateCondition(sectionIndex, conditionIndex, 'params', { customValue: value, currency: selectedCurrency });
     }
-
-    // Clear selected categories when custom value is updated
-    setSelectedCategories([]);
+  
+    setSelectedCategories([]);  // Clear selected categories when custom value is set
   };
 
   const handleCurrencyChange = (currency) => {
@@ -130,6 +172,8 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
 
     if (showCategories && selectedCategories.length > 0) {
       updateCondition(sectionIndex, conditionIndex, prop === 'fact' ? 'params' : `${prop}.params`, { categories: selectedCategories });
+    } else if (showIncomes && selectedIncomes.length > 0) {
+      updateCondition(sectionIndex, conditionIndex, prop === 'fact' ? 'params' : `${prop}.params`, { incomes: selectedIncomes });
     } else if (customValue !== null) {
       updateCondition(sectionIndex, conditionIndex, prop === 'fact' ? 'params' : `${prop}.params`, { customValue: customValue, currency: selectedCurrency });
     } else {
@@ -179,7 +223,28 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
         </Select>
       )}
 
-      {!showCategories && tempValue.includes('custom_value') && (
+      {showIncomes && (
+        <>
+          <span style={{ alignSelf: 'center' }}>from</span>
+          <Select
+            mode="multiple"
+            style={{ flex: 1, minWidth: '200px' }}
+            placeholder="Select income types"
+            value={selectedIncomes}
+            onChange={handleIncomeChange}
+            optionFilterProp="children"
+            showSearch
+          >
+            {availableIncomes.map((income) => (
+              <Option key={income.value} value={income.value}>
+                {income.label}
+              </Option>
+            ))}
+          </Select>
+        </>
+      )}
+
+      {!(showCategories || showIncomes) && tempValue.includes('custom_value') && (
         <>
           <InputNumber
             min={0}

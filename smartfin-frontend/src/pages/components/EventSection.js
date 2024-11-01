@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef} from 'react';
 import { Form, Dropdown, Button, Row, Col, Card } from 'react-bootstrap';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -6,6 +6,7 @@ import { FaTimes } from 'react-icons/fa';
 import Swal from 'sweetalert2';  // Import SweetAlert2 for alerts
 
 function EventSection({ presetEvent, onEventChange }) {
+  const initializedRef = useRef(false);
   const [eventType, setEventType] = useState(presetEvent?.type || 'Notify Text');
   const [emailInput, setEmailInput] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
@@ -14,12 +15,22 @@ function EventSection({ presetEvent, onEventChange }) {
   const [message, setMessage] = useState(presetEvent?.params?.message || '');
 
   // Update state when presetEvent changes (e.g., when editing an existing rule)
+  // useEffect(() => {
+  //   if (presetEvent) {
+  //     setEventType(presetEvent.type || '');
+  //     setEmails(presetEvent.params?.emails || []);
+  //     setPhoneNumbers(presetEvent.params?.phone_numbers || []);
+  //     setMessage(presetEvent.params?.message || '');
+  //   }
+  // }, [presetEvent]);
+
   useEffect(() => {
-    if (presetEvent) {
-      setEventType(presetEvent.type || '');
+    if (presetEvent && !initializedRef.current) {
+      setEventType(presetEvent.type || 'Notify Text');
       setEmails(presetEvent.params?.emails || []);
       setPhoneNumbers(presetEvent.params?.phone_numbers || []);
       setMessage(presetEvent.params?.message || '');
+      initializedRef.current = true;
     }
   }, [presetEvent]);
 
@@ -92,8 +103,7 @@ function EventSection({ presetEvent, onEventChange }) {
   };
 
   return (
-    <Card className="p-3 mb-3 bg-white border rounded">
-      <h4>Event</h4>
+
       <Form>
         <Form.Group as={Row} controlId="formEventType" className="mb-3">
           <Form.Label column sm={2}>Event Type</Form.Label>
@@ -181,7 +191,7 @@ function EventSection({ presetEvent, onEventChange }) {
           </Col>
         </Form.Group>
       </Form>
-    </Card>
+
   );
 }
 

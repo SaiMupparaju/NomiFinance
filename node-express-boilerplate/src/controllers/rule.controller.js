@@ -1,10 +1,11 @@
 const Rule = require('../models/Rule');
 const schedulerApi = require('../utils/schedulerApi');
+const User = require('../models/user.model');
 
 // Create a new rule
 exports.createRule = async (req, res) => {
   try {
-    const { creatorId, subscriberId, rule, color } = req.body;
+    const { creatorId, subscriberId, rule, color, isActive } = req.body;
 
     // Validate input
     if (!creatorId || !subscriberId || !rule) {
@@ -15,13 +16,16 @@ exports.createRule = async (req, res) => {
       creatorId,
       subscriberId,
       rule,
-      color: color || '#ffffff' 
+      color: color || '#ffffff',
+      isActive: isActive !== undefined ? isActive : true
     });
 
     await newRule.save();
 
     // Send the rule to the scheduler API
-    await schedulerApi.scheduleJob(newRule);
+    if (newRule.isActive) {
+      await schedulerApi.scheduleJob(newRule);
+    }
 
     res.status(201).json(newRule);
   } catch (error) {
@@ -70,28 +74,49 @@ exports.activateRule = async (req, res) => {
     const { userId } = req.body;
     const { id } = req.params;
 
-    // Validate userId
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    let rule = await Rule.findById(id);
+    const rule = await Rule.findById(id);
     if (!rule) {
       return res.status(404).json({ error: 'Rule not found' });
     }
 
-    // Check if the user is authorized to activate this rule
     if (String(rule.subscriberId) !== userId) {
       return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Fetch user's current active rules
+    const userActiveRules = await Rule.find({ subscriberId: userId, isActive: true });
+
+    // Get user's subscription info
+    const user = await User.findById(userId);
+    const subscriptionProductId = user.subscriptionProductId;
+
+    let limit = 0;
+    if (subscriptionProductId === 'prod_R0b23M9NcTgjfF') { // Price id fix
+      limit = Infinity;
+    } else if (subscriptionProductId === 'prod_R22J6iyXBxcFLX') {
+      limit = 4;
+    } else if (subscriptionProductId === 'prod_R0auXMo4nOGFkM') {
+      limit = 1;
+    } else {
+      limit = 0;
+    }
+
+    if (userActiveRules.length >= limit) {
+      return res.status(400).json({
+        error: `You have reached the limit of ${limit} active rules for your subscription.`,
+      });
     }
 
     rule.isActive = true;
     await rule.save();
 
-    // Reschedule the job with the updated rule
+    // Schedule the job
     const jobData = await schedulerApi.scheduleJob(rule);
 
-    // Update the rule's jobId with the new job ID
     if (jobData && jobData.job && jobData.job.attrs && jobData.job.attrs._id) {
       rule.jobId = jobData.job.attrs._id;
       await rule.save();

@@ -16,21 +16,21 @@ function IfSection({
 
 
   const operatorMapping = {
-    greaterThanInclusive: '>= Greater Than or Equal To',
-    lessThanInclusive: '<= Less Than or Equal To',
-    equal: '= Equal',
-    notEqual: '!= Not Equal',
-    greaterThan: '> Greater Than',
-    lessThan: '< Less Than',
+    'greaterThanInclusive': 'Greater Than or Equal To',
+    'lessThanInclusive': 'Less Than or Equal To',
+    'equal': 'Equals',
+    'notEqual': 'Not Equal',
+    'greaterThan': 'Greater Than',
+    'lessThan': 'Less Than',
   };
 
   const operatorReverseMapping = {
-    '>= Greater Than or Equal To': 'greaterThanInclusive',
-    '<= Less Than or Equal To': 'lessThanInclusive',
-    '= Equal': 'equal',
-    '!= Not Equal': 'notEqual',
-    '> Greater Than': 'greaterThan',
-    '< Less Than': 'lessThan',
+    'Greater Than or Equal To': 'greaterThanInclusive',
+    'Less Than or Equal To': 'lessThanInclusive',
+    'Equals': 'equal',
+    'Not Equal': 'notEqual',
+    'Greater Than': 'greaterThan',
+    'Less Than': 'lessThan',
   };
 
   const conditionsArray = section[section.ifOP || 'all'];
@@ -100,7 +100,7 @@ function IfSection({
                   <Form.Control
                     type="number"
                     placeholder="Enter Value"
-                    value={condition.customValue || ''}
+                    value={condition.customValue !== undefined ? condition.customValue : ''}
                     onChange={(e) =>
                       updateCondition(
                         sectionIndex,

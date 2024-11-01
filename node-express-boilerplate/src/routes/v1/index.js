@@ -7,6 +7,7 @@ const config = require('../../config/config');
 const ruleRoute = require('./rule.routes');
 const factRoute = require('./fact.route');
 const stripeRoute = require('./stripe.route');
+const suggestionRoute = require('./suggestion.route');
 const router = express.Router();
 
 const defaultRoutes = [
@@ -33,6 +34,10 @@ const defaultRoutes = [
   {
     path:'/payment',
     route:stripeRoute
+  },
+  {
+    path:'/suggest',
+    route: suggestionRoute
   }
 ];
 
