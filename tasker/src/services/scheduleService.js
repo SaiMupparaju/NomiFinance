@@ -235,56 +235,44 @@ class ScheduleService {
 
   
     async scheduleJob(ruleMongObj) {
-        
-        console.log(ruleMongObj._id);
-
+      try {
         const jobName = `execute rule`;
-        console.log("MongRuleObj SCHED JOB START:",  JSON.stringify(ruleMongObj, null, 2));
-
-        const { rule } = ruleMongObj;
-        const {schedule} = rule;
-
+  
+        // Determine if job already exists
         if (ruleMongObj.jobId) {
-            // If job exists, update it
-            //console.log("existing found updating rule");
-            let jobId = ObjectId.isValid(ruleMongObj.jobId) ? new ObjectId(ruleMongObj.jobId) : ruleMongObj.jobId;
-            let existingJob = await this.agenda.jobs({ _id: jobId });
-            console.log("existing job:", existingJob);
-            if (existingJob.length > 0) {
-                //console.log("MongRuleObj SCHED JOB END:",  JSON.stringify(ruleMongObj, null, 2));
-                return this.updateJob(existingJob[0], ruleMongObj);
-            } 
+          console.log("job exists");
+          let jobId = ObjectId.isValid(ruleMongObj.jobId) ? new ObjectId(ruleMongObj.jobId) : ruleMongObj.jobId;
+          let existingJob = await this.agenda.jobs({ _id: jobId });
+          if (existingJob.length > 0) {
+            return await this.updateJob(existingJob[0], ruleMongObj);
+          }
         }
-
-        console.log("no existing creating new");
-        let job = this.agenda.create(jobName, {ruleMongObj: ruleMongObj});
-        this.applySchedule(job, schedule);
-
+        
+        console.log("creating a new job");
+        // Create a new job
+        let job = this.agenda.create(jobName, { ruleMongObj: ruleMongObj });
+        this.applySchedule(job, ruleMongObj.rule.schedule);
+  
         await job.save();
-        await this.updateRuleJobId(ruleMongObj._id, job.attrs._id);
-        //console.log("MongRuleObj SCHED JOB END:",  JSON.stringify(ruleMongObj, null, 2));
+        console.log("returning job", JSON.stringify(job, null, 2));
         return job;
+      } catch (error) {
+        console.error('Error scheduling job in ScheduleService:', error);
+        throw new Error('Failed to schedule job');
+      }
     }
   
     async updateJob(job, ruleMongObj) {
         const { rule } = ruleMongObj;
         const { schedule } = rule;
 
-        
-
-        // Update job data
         job.attrs.data.ruleMongObj = ruleMongObj;
 
-        //console.log("UPDATE JOB RULE:",  JSON.stringify(job.attrs.data.ruleMongObj, null, 2));
-        //console.log("updating job:", job, schedule);
-        // Apply new schedule to the job
         this.applySchedule(job, schedule);
 
-
-        //console.log("FINiSHED UPDATE JOB RULE:",  JSON.stringify(job.attrs.data.ruleMongObj, null, 2));
         await job.save();
         return job;
-        }
+      }
 
 
     
@@ -338,7 +326,7 @@ class ScheduleService {
 
     async updateRuleJobId(ruleId, jobId) {
         try {
-            const response = await axios.put(`http://localhost:3001/v1/rules/${ruleId}/jobId`, { jobId });
+            const response = await axios.put(`${process.env.REACT_APP_BACKEND_API_URL}/v1/rules/${ruleId}/jobId`, { jobId });
             console.log("Rule's jobId updated successfully:", response.data);
         } catch (error) {
             console.error("Failed to update rule's jobId:", error.message);

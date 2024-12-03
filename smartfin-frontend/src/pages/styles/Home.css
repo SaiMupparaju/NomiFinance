@@ -65,6 +65,15 @@
   .navbar-nav .nav-link svg {
     margin-right: 5px;
   }
+
+  .help-text {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 0.9rem;
+    color: #555; /* Adjust color for readability */
+    z-index: 1000; /* Ensure it stays on top */
+  }
   
   .btn {
     display: flex;

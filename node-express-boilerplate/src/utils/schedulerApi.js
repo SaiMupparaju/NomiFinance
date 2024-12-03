@@ -1,13 +1,17 @@
 // src/utils/schedulerApi.js
-
 const axios = require('axios');
 
-const schedulerApiUrl = 'http://localhost:3002/schedule';
+const schedulerApiUrl = process.env.SCHEDULE_URL;
+const taskerApiKey = process.env.TASKER_API_KEY; // The token stored in your Lambda's environment variables
 
 const scheduleJob = async (rule) => {
   try {
-    console.log("trying to send to scheduler");
-    const response = await axios.post(`${schedulerApiUrl}`, rule);
+    const response = await axios.post(`${schedulerApiUrl}`, rule, {
+      headers: {
+        'Authorization': `Bearer ${taskerApiKey}`, // Send the token as a Bearer token
+      },
+    });
+    console.log('Response data from scheduler API:', JSON.stringify(response.data, null, 2));
     return response.data;
   } catch (error) {
     console.error('Error scheduling job:', error.message);
@@ -17,7 +21,11 @@ const scheduleJob = async (rule) => {
 
 const cancelJob = async (jobId) => {
   try {
-    const response = await axios.delete(`${schedulerApiUrl}/${jobId}`);
+    const response = await axios.delete(`${schedulerApiUrl}/${jobId}`, {
+      headers: {
+        'Authorization': `Bearer ${taskerApiKey}`,
+      },
+    });
     return response.data;
   } catch (error) {
     console.error('Error canceling job:', error.message);

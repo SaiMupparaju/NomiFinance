@@ -12,7 +12,7 @@ const moment = require('moment'); // For date manipulation
 const { mongoose } = require('mongoose');
 const { getExchangeRate } = require('../services/exchangeRateService');
 
-const toProperCase = (str) => {
+exports.toProperCase = (str) => {
   const exceptions = ['of', 'the', 'and', 'in', 'on', 'at', 'with', 'a', 'an'];
 
   return str
@@ -28,18 +28,22 @@ const toProperCase = (str) => {
     .join(' '); // Join them back with spaces
 };
 
-const calculateExpenses = async (account, params, timeframe) => {
+exports.calculateExpenses = async (account, params, timeframe) => {
+
+  if (params.categories==undefined || params.categories.length==0){
+    throw new Error("Categories are required to calculate expenses.");
+  }
   try {
     const transactions = account.transactions;
 
     // Define start date based on the timeframe
-    const startDate = getStartDate(timeframe);
+    const startDate = exports.getStartDate(timeframe);
 
     // Filter transactions by date and category
     const totalExpenses = transactions.reduce((sum, transaction) => {
       const transactionDate = moment(transaction.date);
 
-      if (transactionDate.isAfter(startDate) && shouldCountTransaction(transaction, params.categories)) {
+      if (transactionDate.isAfter(startDate) && exports.shouldCountTransaction(transaction, params.categories)) {
         // Add positive amounts or negate negative amounts
         return sum + (transaction.amount > 0 ? transaction.amount : -1 * transaction.amount);
       }
@@ -54,7 +58,7 @@ const calculateExpenses = async (account, params, timeframe) => {
 };
 
 // Function to calculate start date based on the timeframe
-const getStartDate = (timeframe) => {
+exports.getStartDate = (timeframe) => {
   switch (timeframe) {
     case 'since_last_month':
       return moment().subtract(1, 'month').startOf('day');
@@ -72,7 +76,7 @@ const getStartDate = (timeframe) => {
 };
 
 // Function to check if the transaction matches the categories from params
-const shouldCountTransaction = (transaction, categories) => {
+exports.shouldCountTransaction = (transaction, categories) => {
   const { personal_finance_category: pfc } = transaction;
 
   if (pfc && categories.includes(pfc.primary)) {
@@ -106,7 +110,7 @@ const convertToUSD = async (value, currency) => {
   }
 };
 
-const isIncomeTransaction = (transaction, incomeType, params) => {
+exports.isIncomeTransaction = (transaction, incomeType, params) => {
   const { personal_finance_category: pfc } = transaction;
 
   if (!pfc) return false;
@@ -124,16 +128,25 @@ const isIncomeTransaction = (transaction, incomeType, params) => {
   return false;
 };
 
-const calculateIncome = async (account, params, timeframe, incomeType) => {
+exports.calculateIncome = async (account, params, timeframe, incomeType) => {
+  
+  if (account == undefined){
+    throw new Error('Error in CalculateIncome:", "Account undefined');
+  }else if (incomeType=="from" && (params.incomes == undefined || params.incomes.lenght == 0)) {
+    throw new Error("Incomes are required to calculate income from specific sources.");
+  }
+
   try {
     const transactions = account.transactions;
 
-    const startDate = getStartDate(timeframe);
+    const startDate = exports.getStartDate(timeframe);
+
+    
 
     const totalIncome = transactions.reduce((sum, transaction) => {
       const transactionDate = moment(transaction.date);
 
-      if (transactionDate.isAfter(startDate) && isIncomeTransaction(transaction, incomeType, params)) {
+      if (transactionDate.isAfter(startDate) && exports.isIncomeTransaction(transaction, incomeType, params)) {
         return sum + (transaction.amount > 0 ? transaction.amount : 0);
       }
       return sum;
@@ -184,10 +197,10 @@ exports.getFactValue = async (userId, factString, params) => {
     }
 
     // Normalize the bank name
-    const bankName = toProperCase(factBankName); // Convert "bank_of_america" to "Bank Of America"
+    const bankName = exports.toProperCase(factBankName); // Convert "bank_of_america" to "Bank Of America"
 
     // Extract the account name and mask by slicing
-    const accountName = toProperCase(factAccountString.slice(0, -5)); // Account name is the part before the last 5 characters
+    const accountName = exports.toProperCase(factAccountString.slice(0, -5)); // Account name is the part before the last 5 characters
     const accountMask = factAccountString.slice(-4); // Last 4 characters represent the mask
 
     // Fetch the account from the database based on bank name, account name, and mask
@@ -220,7 +233,7 @@ exports.getFactValue = async (userId, factString, params) => {
       }
 
       const expenseTimeframe = subProperty; // This could be 'since_last_month', 'since_1_week', etc.
-      const totalExpenses = await calculateExpenses(account, params, expenseTimeframe);
+      const totalExpenses = await exports.calculateExpenses(account, params, expenseTimeframe);
       return totalExpenses;
     }
 
@@ -238,14 +251,14 @@ exports.getFactValue = async (userId, factString, params) => {
     
       if (incomeType === 'total') {
         // Calculate total income
-        const totalIncome = await calculateIncome(account, params, timeframe, 'total');
+        const totalIncome = await exports.calculateIncome(account, params, timeframe, 'total');
         return totalIncome;
       } else if (incomeType === 'from') {
         if (!params || !params.incomes || !Array.isArray(params.incomes) || params.incomes.length === 0) {
           throw new Error('Incomes are required to calculate income from specific sources.');
         }
         // Calculate income from specific sources
-        const totalIncome = await calculateIncome(account, params, timeframe, 'from');
+        const totalIncome = await exports.calculateIncome(account, params, timeframe, 'from');
         return totalIncome;
       } else {
         throw new Error(`Invalid income type: ${incomeType}`);

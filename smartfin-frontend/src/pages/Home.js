@@ -16,6 +16,7 @@ import './styles/Home.css';
 function Home() {
   const { auth, logout } = useAuth();
   const { accounts: bankAccounts, refreshAccounts, loading, error } = useAccounts(); // Access bank accounts from context
+  console.log("bank accounts:", bankAccounts);
   const navigate = useNavigate();
   const { factTree, refetchFactTree } = useFact();
   
@@ -28,16 +29,21 @@ function Home() {
   const [subscriptionLimit, setSubscriptionLimit] = useState(0);
   const [activeRulesCount, setActiveRulesCount] = useState(0);
 
+  const hasBankAccounts = 
+  (bankAccounts && Object.values(bankAccounts).some(accountsArray => Array.isArray(accountsArray) && accountsArray.length > 0)) ||
+  (factTree && !factTree.some(node => node.label === "Guest Bank"));
+
+
   useEffect(() => {
     if (auth.user) {
       const subscriptionProductId = auth.user.subscriptionProductId;
 
       let limit = 0;
-      if (subscriptionProductId === 'prod_R0b23M9NcTgjfF') {
+      if (subscriptionProductId === process.env.REACT_APP_NOMI_PREMIUM) {
         limit = Infinity; // Premium has no limit
-      } else if (subscriptionProductId === 'prod_R22J6iyXBxcFLX') {
+      } else if (subscriptionProductId === process.env.REACT_APP_NOMI_STANDARD) {
         limit = 4; // Standard subscription limit
-      } else if (subscriptionProductId === 'prod_R0auXMo4nOGFkM') {
+      } else if (subscriptionProductId === process.env.REACT_APP_NOMI_SINGLE) {
         limit = 1; // Single subscription limit
       } else {
         limit = 0; // No subscription
@@ -104,7 +110,7 @@ function Home() {
   };
 
   const handleCreateRule = () => {
-    navigate('/create-rule', { state: { userRules: rules } });
+    navigate('/create-rule', { state: { userRules: rules, hasBankAccounts} });
   };
 
   const handleToggleRule = (ruleId, isActive) => {
@@ -122,11 +128,11 @@ function Home() {
         const subscriptionProductId = auth.user.subscriptionProductId;
 
         let limit = 0;
-        if (subscriptionProductId === 'prod_R0b23M9NcTgjfF') {
+        if (subscriptionProductId === process.env.REACT_APP_NOMI_PREMIUM) {
           limit = Infinity; // Premium has no limit
-        } else if (subscriptionProductId === 'prod_R22J6iyXBxcFLX') {
+        } else if (subscriptionProductId === process.env.REACT_APP_NOMI_STANDARD) {
           limit = 4; // Standard subscription limit
-        } else if (subscriptionProductId === 'prod_R0auXMo4nOGFkM') {
+        } else if (subscriptionProductId === process.env.REACT_APP_NOMI_SINGLE) {
           limit = 1; // Single subscription limit
         }
 
@@ -196,6 +202,25 @@ function Home() {
       Swal.fire('Error!', 'An error occurred while trying to toggle the rule.', 'error');
     }
 };
+
+const handleForceUpdateMode = async () => {
+  try {
+    // Assuming you have the bank name stored or selected by the user
+    const bankName = 'Bank Of America'; // Replace with the actual bank name or allow the user to select
+
+    const response = await axiosInstance.post('/plaid/force-reset-login', {
+      bankName,
+    });
+
+    console.log('Item forced into update mode:', response.data);
+    alert('Item has been forced into update mode. Try accessing your accounts again to see the update flow.');
+  } catch (error) {
+    console.error('Error forcing item into update mode:', error);
+    alert('Error forcing item into update mode. See console for details.');
+  }
+};
+
+
   
 
   const handleLayoutChange = (option) => {
@@ -216,7 +241,6 @@ function Home() {
     }
   };
 
-  const stripePromise = useMemo(() => loadStripe("pk_test_51Q74V1FbGvhl0lO07hE1gQ7N8T2ejNIphVf2BsJcmYLm15IfJDfRQ7SBsEG6LAWkScHD3NtzK8scMacLLn9V6lEV00qBGkCE6n"), []);
 
   // Function to initiate the payment
   const handlePayment = () => {
@@ -232,13 +256,27 @@ function Home() {
       {/* Navigation Bar Outside the Container */}
       <Navbar bg="dark" variant="dark" expand="lg" className="w-100 mb-4">
         <Container fluid className="px-4"> {/* Adds padding on the left and right */}
-          <Navbar.Brand className="text-white">Nomi.fyi</Navbar.Brand>
+          
+          <Navbar.Brand className="text-white">Nomi Finance</Navbar.Brand>
+          <sup style={{ fontSize: '0.7rem', color: 'lightgreen', marginLeft: '4px' }}>[Beta]</sup>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="ms-auto align-items-center">
-              <Button variant="primary" onClick={handleCreateRule} className="me-2">
-                <FaPlus /> Create Rule
-              </Button>
+                {!hasBankAccounts && (
+                  <Button onClick={() => navigate('/connect-banks')} classname="me-2" variant="primary">
+                    <FaPlus /> Connect Accounts
+                  </Button>
+                )}
+                {hasBankAccounts && (
+                  <Button variant="primary" onClick={handleCreateRule} className="me-2">
+                  <FaPlus /> Create Rule
+                  </Button>
+                )}
+
+          
+              {/* <Button variant="primary" onClick={handleGetIncome}>
+              Call Income API
+              </Button> */}
 
               {/* Layout Selector Dropdown */}
               <NavDropdown align="end" title={<FaThLarge />} id="layout-dropdown">
@@ -281,6 +319,14 @@ function Home() {
 
       {/* Main Content */}
       <div className="home-container">
+      <Row>
+        <Col className="text-start mb-2">
+          <small className="text-muted">
+            Need help? Contact us at{' '}
+            <a href="mailto:sophia@nomifinance.com" className="text-muted">sophia@nomifinance.com</a>
+          </small>
+        </Col>
+      </Row>
         <Container fluid>
           {rules.length === 0 ? (
             <div className="text-center my-5">

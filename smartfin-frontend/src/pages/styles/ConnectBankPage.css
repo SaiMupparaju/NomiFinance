@@ -1,0 +1,18 @@
+/* In your CSS file */
+
+.container.position-relative {
+    position: relative;
+  }
+  
+  .do-this-later-button {
+    bottom: 20px;
+    right: 20px;
+    cursor: pointer;
+  }
+  
+  .do-this-later-button:hover {
+    background-color: blue;
+    border-color: blue;
+    color: white;
+  }
+  

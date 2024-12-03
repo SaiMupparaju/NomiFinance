@@ -7,45 +7,49 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './PaymentSuccess.css';
 
 function PaymentSuccess() {
-  const { setUser, auth } = useAuth(); 
+  const { setUser, auth, setAuth } = useAuth(); 
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(true);
-  const retriesRef = useRef(0);          // Ref to maintain retries count
-  const isMountedRef = useRef(true);     // Ref to check if component is mounted
-  const maxRetries = 10;                 // Maximum number of retries
+  // const retriesRef = useRef(0);          // Ref to maintain retries count
+  // const isMountedRef = useRef(true);     // Ref to check if component is mounted
+  // const maxRetries = 10;                 // Maximum number of retries
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (!isMountedRef.current) return; // Exit if component is unmounted
+    let retries = 0;
+    const maxRetries = 10; // Adjust as needed
+    const pollInterval = 3000; // Poll every 3 seconds
 
+    const pollSubscriptionStatus = async () => {
       try {
-        const response = await axiosInstance.get(`/users/${auth.user.id}`);
-        console.log('User data in PaymentSuccess:', response.data);
+        const response = await axiosInstance.get('/users/subscription');
+        const subscriptionData = response.data;
 
-        setUser(response.data);
-
-        if (response.data.subscriptionStatus === 'active') {
-          setIsProcessing(false);
-        } else if (retriesRef.current >= maxRetries) {
-          console.warn('Subscription status did not update in time.');
-          setIsProcessing(false);
+        if (subscriptionData.subscriptionStatus === 'active') {
+          console.log("user found");
+          setAuth((prevAuth) => ({
+            ...prevAuth,
+            user: {
+              ...prevAuth.user,
+              ...subscriptionData,
+            },
+          }));
+          navigate('/home'); // Redirect to home or desired page
         } else {
-          retriesRef.current++;
-          // Schedule the next fetch after 2 seconds
-          setTimeout(fetchUserData, 2000);
+          throw new Error('Subscription not active yet');
         }
       } catch (error) {
-        console.error('Error fetching user data:', error);
-        setIsProcessing(false);
+        if (retries < maxRetries) {
+          retries += 1;
+          setTimeout(pollSubscriptionStatus, pollInterval);
+        } else {
+          console.error('Max retries reached. Subscription not activated.');
+          // Handle max retries exceeded (show error message, etc.)
+        }
       }
     };
 
-    fetchUserData(); // Initial fetch on component mount
-
-    return () => {
-      isMountedRef.current = false; // Set to false when component unmounts
-    };
-  }, [auth.user.id]); // Remove setUser from dependencies
+    pollSubscriptionStatus();
+  }, [setAuth, navigate]); // Remove setUser from dependencies
 
   const handleGoHome = () => {
     navigate('/home/');

@@ -68,6 +68,7 @@ app.use('/webhook/plaid', require('./routes/v1/plaid.route'));
 
 const initializeExchangeRates = async () => {
   try {
+    console.log(`plaid webhook: ${process.env.PLAID_WEBHOOK}`);
     console.log('Fetching and storing exchange rates...');
     await fetchAndStoreRates(); // Fetch rates on startup
     setInterval(fetchAndStoreRates, 86400000); // Repeat every 24 hours

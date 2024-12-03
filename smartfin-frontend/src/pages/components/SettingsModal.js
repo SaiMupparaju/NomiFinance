@@ -19,13 +19,16 @@ function SettingsModal({ show, handleClose, bankAccounts }) {
             <Col md={3} className="pr-3">
               <Nav variant="pills" className="flex-column account-settings-links">
                 <Nav.Item>
-                  <Nav.Link eventKey="update-accounts">Update Accounts</Nav.Link>
+                  <Nav.Link eventKey="update-accounts">Bank Accounts</Nav.Link>
                 </Nav.Item>
                 <Nav.Item>
                   <Nav.Link eventKey="profile-settings">Profile Settings</Nav.Link>
                 </Nav.Item>
                 <Nav.Item>
                   <Nav.Link eventKey="payment-info">Payment Info</Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link eventKey="privacy-policy">Privacy Policy</Nav.Link>
                 </Nav.Item>
               </Nav>
             </Col>
@@ -44,6 +47,16 @@ function SettingsModal({ show, handleClose, bankAccounts }) {
                 <Tab.Pane eventKey="payment-info">
                   <div className="p-3">
                     <PaymentInfo />
+                  </div>
+                </Tab.Pane>
+                <Tab.Pane eventKey="privacy-policy">
+                  <div className="p-3">
+                    <h5>Privacy Policy</h5>
+                    <iframe
+                      src="/privacypolicy.pdf"
+                      style={{ width: '100%', height: '500px', border: 'none' }}
+                      title="Privacy Policy"
+                    ></iframe>
                   </div>
                 </Tab.Pane>
               </Tab.Content>

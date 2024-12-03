@@ -8,8 +8,8 @@ const transport = nodemailer.createTransport({
   port: 587,
   secure: false, // true for 465, false for other ports
   auth: {
-      user: 'postmaster@sandbox50a0776f6a664421bf6ca474029a8c00.mailgun.org', // your Gmail email
-      pass: '7275b863ceb8407dec3ba8c0af983c32-777a617d-c01a0da4'   // your Gmail password or App Password
+      user: 'postmaster@mg.nomifinance.com', // your Gmail email
+      pass: '811ee3b1812ef0142872b7d432aec11e-6df690bb-6783f095'   // your Gmail password or App Password
   }
 });
 
@@ -29,7 +29,7 @@ if (config.env !== 'test') {
  * @returns {Promise}
  */
 const sendEmail = async (to, subject, text) => {
-  const msg = { from: config.email.from, 
+  const msg = { from: 'support@mg.nomifinance.com', 
     to: to, 
     subject: subject, 
     text: text,
@@ -47,7 +47,7 @@ const sendEmail = async (to, subject, text) => {
 const sendResetPasswordEmail = async (to, token) => {
   const subject = 'Reset password';
   // replace this url with the link to the reset password page of your front-end app
-  const resetPasswordUrl = `http://localhost:3000/reset-password?token=${token}`;
+  const resetPasswordUrl = `${process.env.REDIRECT_URL}/reset-password?token=${token}`;
   const text = `Dear user,
 To reset your password, click on this link: ${resetPasswordUrl}
 If you did not request any password resets, then ignore this email.`;
@@ -63,7 +63,7 @@ If you did not request any password resets, then ignore this email.`;
 const sendVerificationEmail = async (to, token) => {
   const subject = 'Nomi Email Verification';
   // replace this url with the link to the email verification page of your front-end app
-  const verificationEmailUrl = `http://localhost:3000/verify-email?token=${token}`; //TODO Update 
+  const verificationEmailUrl = `${process.env.REDIRECT_URL}/verify-email?token=${token}`; //TODO Update 
   const text = `
 Thanks for signing up to Nomi! \n \n To verify your email, click on this link: ${verificationEmailUrl}
 If you did not create an account, then ignore this email.`;

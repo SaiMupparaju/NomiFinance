@@ -1,0 +1,456 @@
+{
+  "C:\\Users\\sai_v\\saisophia\\node-express-boilerplate": {
+    "versionSfCore": null,
+    "versionFramework": "4.4.7",
+    "isWithinCompose": false,
+    "isCompose": false,
+    "composeOrgName": null,
+    "composeResolverProviders": {
+      "default-aws-credential-resolver": "<REDACTED>"
+    },
+    "composeServiceName": null,
+    "servicePath": "C:\\Users\\sai_v\\saisophia\\node-express-boilerplate",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "service": "nomi-express",
+      "provider": {
+        "name": "aws",
+        "runtime": "nodejs20.x",
+        "stage": "prod",
+        "region": "us-east-1",
+        "environment": {
+          "PORT": "3001",
+          "MONGODB_URL": "mongodb+srv://nomifinance12:ShanghaiChilliCrab3.14@nomi-serverlessinstance.y0jbxob.mongodb.net/",
+          "FRONTEND_URL": "http://3.131.162.221",
+          "SCHEDULE_URL": "http://18.218.214.134:3002/schedule",
+          "TASKER_API_KEY": "<REDACTED>",
+          "PLAID_ENV": "sandbox",
+          "PLAID_CLIENT_ID": "66ef2c652ac9d100192cbf71",
+          "PLAID_SECRET": "<REDACTED>",
+          "PLAID_WEBHOOK": "https://jcoh9ddsih.execute-api.us-east-1.amazonaws.com/prod",
+          "STRIPE_WEBHOOK_SECRET": "<REDACTED>",
+          "JWT_SECRET": "<REDACTED>",
+          "JWT_ACCESS_EXPIRATION_MINUTES": "30",
+          "JWT_REFRESH_EXPIRATION_DAYS": "30",
+          "JWT_RESET_PASSWORD_EXPIRATION_MINUTES": "<REDACTED>",
+          "JWT_VERIFY_EMAIL_EXPIRATION_MINUTES": "10",
+          "SMTP_HOST": "email-server",
+          "SMTP_PORT": "587",
+          "SMTP_USERNAME": "email-server-username",
+          "SMTP_PASSWORD": "<REDACTED>",
+          "EMAIL_FROM": "support@yourapp.com"
+        },
+        "versionFunctions": true,
+        "compiledCloudFormationTemplate": {
+          "AWSTemplateFormatVersion": "2010-09-09",
+          "Description": "The AWS CloudFormation template for this Serverless application",
+          "Resources": {
+            "AppLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/nomi-express-prod-app"
+              }
+            },
+            "IamRoleLambdaExecution": {
+              "Type": "AWS::IAM::Role",
+              "Properties": {
+                "AssumeRolePolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": [
+                          "lambda.amazonaws.com"
+                        ]
+                      },
+                      "Action": [
+                        "sts:AssumeRole"
+                      ]
+                    }
+                  ]
+                },
+                "Policies": [
+                  {
+                    "PolicyName": {
+                      "Fn::Join": [
+                        "-",
+                        [
+                          "nomi-express",
+                          "prod",
+                          "lambda"
+                        ]
+                      ]
+                    },
+                    "PolicyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogStream",
+                            "logs:CreateLogGroup",
+                            "logs:TagResource"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/nomi-express-prod*:*"
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:PutLogEvents"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/nomi-express-prod*:*:*"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Path": "/",
+                "RoleName": {
+                  "Fn::Join": [
+                    "-",
+                    [
+                      "nomi-express",
+                      "prod",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "lambdaRole"
+                    ]
+                  ]
+                }
+              }
+            },
+            "AppLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-02e145ee-39c4",
+                  "S3Key": "serverless/nomi-express/prod/1731485256831-2024-11-13T08:07:36.831Z/nomi-express.zip"
+                },
+                "Handler": "src/app.handler",
+                "Runtime": "nodejs20.x",
+                "FunctionName": "nomi-express-prod-app",
+                "MemorySize": 1024,
+                "Timeout": 30,
+                "Environment": {
+                  "Variables": {
+                    "PORT": "3001",
+                    "MONGODB_URL": "mongodb+srv://nomifinance12:ShanghaiChilliCrab3.14@nomi-serverlessinstance.y0jbxob.mongodb.net/",
+                    "FRONTEND_URL": "http://3.131.162.221",
+                    "SCHEDULE_URL": "http://18.218.214.134:3002/schedule",
+                    "TASKER_API_KEY": "<REDACTED>",
+                    "PLAID_ENV": "sandbox",
+                    "PLAID_CLIENT_ID": "66ef2c652ac9d100192cbf71",
+                    "PLAID_SECRET": "<REDACTED>",
+                    "PLAID_WEBHOOK": "https://jcoh9ddsih.execute-api.us-east-1.amazonaws.com/prod",
+                    "STRIPE_WEBHOOK_SECRET": "<REDACTED>",
+                    "JWT_SECRET": "<REDACTED>",
+                    "JWT_ACCESS_EXPIRATION_MINUTES": "30",
+                    "JWT_REFRESH_EXPIRATION_DAYS": "30",
+                    "JWT_RESET_PASSWORD_EXPIRATION_MINUTES": "<REDACTED>",
+                    "JWT_VERIFY_EMAIL_EXPIRATION_MINUTES": "10",
+                    "SMTP_HOST": "email-server",
+                    "SMTP_PORT": "587",
+                    "SMTP_USERNAME": "email-server-username",
+                    "SMTP_PASSWORD": "<REDACTED>",
+                    "EMAIL_FROM": "support@yourapp.com"
+                  }
+                },
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "AppLogGroup"
+              ]
+            },
+            "AppLambdaVersionJxYZi1d4bpVDsHHeRdwzv45tz4BozIv25WPBIVicuc4": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "AppLambdaFunction"
+                },
+                "CodeSha256": "4bq4MdSx9/1q6VghDvNqRqqQpQzd7lxBLGVUPvHUw9U="
+              }
+            },
+            "ApiGatewayRestApi": {
+              "Type": "AWS::ApiGateway::RestApi",
+              "Properties": {
+                "Name": "prod-nomi-express",
+                "EndpointConfiguration": {
+                  "Types": [
+                    "EDGE"
+                  ]
+                },
+                "Policy": ""
+              }
+            },
+            "ApiGatewayResourceProxyVar": {
+              "Type": "AWS::ApiGateway::Resource",
+              "Properties": {
+                "ParentId": {
+                  "Fn::GetAtt": [
+                    "ApiGatewayRestApi",
+                    "RootResourceId"
+                  ]
+                },
+                "PathPart": "{proxy+}",
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                }
+              }
+            },
+            "ApiGatewayMethodProxyVarAny": {
+              "Type": "AWS::ApiGateway::Method",
+              "Properties": {
+                "HttpMethod": "ANY",
+                "RequestParameters": {},
+                "ResourceId": {
+                  "Ref": "ApiGatewayResourceProxyVar"
+                },
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                },
+                "ApiKeyRequired": "<REDACTED>",
+                "AuthorizationType": "NONE",
+                "Integration": {
+                  "IntegrationHttpMethod": "POST",
+                  "Type": "AWS_PROXY",
+                  "Uri": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition"
+                        },
+                        ":apigateway:",
+                        {
+                          "Ref": "AWS::Region"
+                        },
+                        ":lambda:path/2015-03-31/functions/",
+                        {
+                          "Fn::GetAtt": [
+                            "AppLambdaFunction",
+                            "Arn"
+                          ]
+                        },
+                        "/invocations"
+                      ]
+                    ]
+                  }
+                },
+                "MethodResponses": []
+              },
+              "DependsOn": [
+                "AppLambdaPermissionApiGateway"
+              ]
+            },
+            "ApiGatewayDeployment1731485248910": {
+              "Type": "AWS::ApiGateway::Deployment",
+              "Properties": {
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                },
+                "StageName": "prod"
+              },
+              "DependsOn": [
+                "ApiGatewayMethodProxyVarAny"
+              ]
+            },
+            "AppLambdaPermissionApiGateway": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "AppLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "ApiGatewayRestApi"
+                      },
+                      "/*/*"
+                    ]
+                  ]
+                }
+              }
+            }
+          },
+          "Outputs": {
+            "ServerlessDeploymentBucketName": {
+              "Value": "serverless-framework-deployments-us-east-1-02e145ee-39c4",
+              "Export": {
+                "Name": "sls-nomi-express-prod-ServerlessDeploymentBucketName"
+              }
+            },
+            "AppLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "AppLambdaVersionJxYZi1d4bpVDsHHeRdwzv45tz4BozIv25WPBIVicuc4"
+              },
+              "Export": {
+                "Name": "sls-nomi-express-prod-AppLambdaFunctionQualifiedArn"
+              }
+            },
+            "ServiceEndpoint": {
+              "Description": "URL of the service endpoint",
+              "Value": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "https://",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    ".execute-api.",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ".",
+                    {
+                      "Ref": "AWS::URLSuffix"
+                    },
+                    "/prod"
+                  ]
+                ]
+              },
+              "Export": {
+                "Name": "sls-nomi-express-prod-ServiceEndpoint"
+              }
+            }
+          }
+        },
+        "vpc": {}
+      },
+      "functions": {
+        "app": {
+          "handler": "src/app.handler",
+          "timeout": 30,
+          "events": [
+            {
+              "http": {
+                "path": "{proxy+}",
+                "method": "any",
+                "integration": "AWS_PROXY"
+              }
+            }
+          ],
+          "name": "nomi-express-prod-app",
+          "package": {},
+          "memory": 1024,
+          "runtime": "nodejs20.x",
+          "vpc": {},
+          "versionLogicalId": "AppLambdaVersionJxYZi1d4bpVDsHHeRdwzv45tz4BozIv25WPBIVicuc4"
+        }
+      },
+      "custom": {
+        "webpack": {
+          "webpackConfig": "./webpack.config.js",
+          "includeModules": true
+        }
+      },
+      "package": {
+        "exclude": [
+          "node_modules/**",
+          ".git/**",
+          ".vscode/**",
+          ".env"
+        ],
+        "artifactsS3KeyDirname": "serverless/nomi-express/prod/code-artifacts",
+        "deploymentBucket": "serverless-framework-deployments-us-east-1-02e145ee-39c4",
+        "artifact": "C:\\Users\\sai_v\\saisophia\\node-express-boilerplate\\.serverless\\nomi-express.zip",
+        "artifactDirectoryName": "serverless/nomi-express/prod/1731485256831-2024-11-13T08:07:36.831Z"
+      }
+    },
+    "serviceRawFile": "service: nomi-express\r\n\r\nprovider:\r\n  name: aws\r\n  runtime: nodejs20.x # or whichever version you're using\r\n  stage: prod # adjust as needed\r\n  region: us-east-1 # adjust as needed\r\n  environment:\r\n    PORT: 3001\r\n    MONGODB_URL: mongodb+srv://nomifinance12:ShanghaiChilliCrab3.14@nomi-serverlessinstance.y0jbxob.mongodb.net/\r\n    FRONTEND_URL: http://3.131.162.221\r\n    SCHEDULE_URL: http://18.218.214.134:3002/schedule\r\n    TASKER_API_KEY: 945c1bbf30759babfc9ea41e5f92918c95ba54298afc49afc36b3639867029f9\r\n    PLAID_ENV: sandbox\r\n    PLAID_CLIENT_ID: 66ef2c652ac9d100192cbf71\r\n    PLAID_SECRET: e1c8e85fbf43877ab29e9147b7d4b2\r\n    PLAID_WEBHOOK: https://jcoh9ddsih.execute-api.us-east-1.amazonaws.com/prod\r\n    STRIPE_WEBHOOK_SECRET: whsec_3548ac5a67033494b94c36d4273f70c410582ebf84f4fa3bb698e2f5a0fad87e\r\n    JWT_SECRET: thisisasamplesecret\r\n    JWT_ACCESS_EXPIRATION_MINUTES: 30\r\n    JWT_REFRESH_EXPIRATION_DAYS: 30\r\n    JWT_RESET_PASSWORD_EXPIRATION_MINUTES: 10\r\n    JWT_VERIFY_EMAIL_EXPIRATION_MINUTES: 10\r\n    SMTP_HOST: email-server\r\n    SMTP_PORT: 587\r\n    SMTP_USERNAME: email-server-username\r\n    SMTP_PASSWORD: email-server-password\r\n    EMAIL_FROM: support@yourapp.com\r\n\r\n# Function configuration\r\nfunctions:\r\n  app:\r\n    handler: src/app.handler\r\n    timeout: 30 # Adjust as needed\r\n    events:\r\n      - http:\r\n          path: /{proxy+}\r\n          method: any\r\n\r\n\r\ncustom:\r\n  webpack:\r\n    webpackConfig: './webpack.config.js'\r\n    includeModules: true\r\n\r\npackage:\r\n  exclude:\r\n    - node_modules/**\r\n    - .git/**\r\n    - .vscode/**\r\n    - .env\r\n",
+    "command": [
+      "deploy"
+    ],
+    "options": {},
+    "error": null,
+    "params": {},
+    "machineId": "a38c2b68bf37f0245c9f29bd59485899",
+    "stage": "prod",
+    "accessKeyV2": "<REDACTED>",
+    "accessKeyV1": "<REDACTED>",
+    "orgId": "3f10485e-d961-4d84-be4f-6fda496c449a",
+    "orgName": "nomifinance",
+    "userId": "PnqXJqn9yH9jhSR8hz",
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": false,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "userName": "nomifinance",
+    "subscription": null,
+    "userEmail": "nomi.finance12@gmail.com",
+    "serviceProviderAwsRegion": "us-east-1",
+    "serviceProviderAwsCredentials": "<REDACTED>",
+    "serviceProviderAwsAccountId": "288761735626",
+    "projectType": "traditional",
+    "versionSf": "4.4.7",
+    "serviceProviderAwsCfStackName": "nomi-express-prod",
+    "integrations": {},
+    "serviceUniqueId": "arn:aws:cloudformation:us-east-1:288761735626:stack/nomi-express-prod/eae1a810-a11f-11ef-8a92-124b85f35cc1",
+    "serviceProviderAwsCfStackId": "arn:aws:cloudformation:us-east-1:288761735626:stack/nomi-express-prod/eae1a810-a11f-11ef-8a92-124b85f35cc1",
+    "serviceProviderAwsCfStackCreated": "2024-11-12T17:59:52.971Z",
+    "serviceProviderAwsCfStackUpdated": "2024-11-13T08:07:45.476Z",
+    "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
+    "serviceProviderAwsCfStackOutputs": [
+      {
+        "OutputKey": "AppLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:288761735626:function:nomi-express-prod-app:7",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-nomi-express-prod-AppLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "ServiceEndpoint",
+        "OutputValue": "https://jcoh9ddsih.execute-api.us-east-1.amazonaws.com/prod",
+        "Description": "URL of the service endpoint",
+        "ExportName": "sls-nomi-express-prod-ServiceEndpoint"
+      },
+      {
+        "OutputKey": "ServerlessDeploymentBucketName",
+        "OutputValue": "serverless-framework-deployments-us-east-1-02e145ee-39c4",
+        "ExportName": "sls-nomi-express-prod-ServerlessDeploymentBucketName"
+      }
+    ]
+  }
+}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Row, Col, Dropdown, Button, Form } from 'react-bootstrap';
+import { Row, Col, Dropdown, Button, Form, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import { AiOutlineExclamationCircle } from 'react-icons/ai'; 
 import BankCascader from './BankCascader';
 
 function IfSection({
@@ -43,6 +44,22 @@ function IfSection({
 
   return (
     <div className="if-section">
+      {conditionsArray.length === 0 && (
+        <OverlayTrigger
+          placement="right"
+          overlay={
+            <Tooltip id={`tooltip-empty-condition-${sectionIndex}`}>
+              This part has no conditions and will cause an error — press "Remove If" if you don't need it.
+            </Tooltip>
+          }
+        >
+          <span className="error-icon" style={{ color: 'red', position: 'absolute', top: 0, right: '-20px' }}>
+            <AiOutlineExclamationCircle size={16} />
+          </span>
+        </OverlayTrigger>
+      )}
+
+
       {conditionsArray.map((condition, conditionIndex) => (
         <React.Fragment key={conditionIndex}>
           <Row className="align-items-center mb-2">

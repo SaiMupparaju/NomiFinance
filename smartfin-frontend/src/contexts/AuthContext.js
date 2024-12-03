@@ -6,6 +6,7 @@ import { login as apiLogin,
 } from '../utils/api';
 import axios from 'axios';
 import axiosInstance from '../utils/axiosInstance';
+import logoutState from '../utils/logoutState';
 
 const AuthContext = createContext(null);
 
@@ -21,9 +22,14 @@ export const AuthProvider = ({ children }) => {
 
     const setDefaultAxios = (token) => {
         if (token) {
-            axios.defaults.headers.common['Authorization'] = "Bearer ${token}";
+            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`; // Use backticks for template literals
+        } else {
+            delete axiosInstance.defaults.headers.common['Authorization']; // Remove the header if the token is not present
         }
-    }
+    };
+
+
+
 
     const resendVerificationEmail = async () => {
         try {
@@ -36,9 +42,12 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             const { user, tokens } = await apiLogin(email, password);
+            logoutState.isLoggingOut = false;
             console.log("Auth Context", user);
             localStorage.setItem('user', JSON.stringify(user));
             localStorage.setItem('token', tokens.access.token);
+            console.log("refresh token", tokens.refresh.token, typeof tokens.refresh.token === 'string' );
+            localStorage.setItem('refreshToken', tokens.refresh.token);
             setAuth({ user, tokens });
             
             setDefaultAxios(tokens.access.token);
@@ -55,6 +64,7 @@ export const AuthProvider = ({ children }) => {
             const { user, tokens } = await apiRegister(userData);
             localStorage.setItem('user', JSON.stringify(user));
             localStorage.setItem('token', tokens.access.token);
+            localStorage.setItem('refreshToken', tokens.refresh.token);
             setAuth({ user, tokens });
 
             setDefaultAxios(tokens.access.token);
@@ -94,7 +104,7 @@ export const AuthProvider = ({ children }) => {
     const exchangePublicToken = async (publicToken) => {
         try {
             const data = await apiExchangePublicToken(publicToken);
-            console.log('Access token:', data.accessToken);
+            //console.log('Access token:', data.accessToken);
             // You would typically want to save this accessToken to state or somewhere persistent
         } catch (error) {
             console.error("Failed to exchange public token:", error);
@@ -106,6 +116,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         setAuth({ user: null, tokens: null });
+        setDefaultAxios(null);
     };
 
     const continueAsGuest = () => {

@@ -12,23 +12,29 @@ exports.createRule = async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Create a new Rule instance but do not save it yet
     const newRule = new Rule({
       creatorId,
       subscriberId,
       rule,
       color: color || '#ffffff',
-      isActive: isActive !== undefined ? isActive : true
+      isActive: isActive !== undefined ? isActive : true,
     });
 
-    await newRule.save();
-
-    // Send the rule to the scheduler API
+    // Attempt to schedule the job with the task server
     if (newRule.isActive) {
-      await schedulerApi.scheduleJob(newRule);
+      // Schedule the job and get the full job object (includes jobId)
+      const jobData = await schedulerApi.scheduleJob(newRule);
+      console.log("new rule's jobid:", jobData.job._id);
+      newRule.jobId = jobData.job._id; // job.attrs.id contains the jobId
     }
+
+    // If scheduling was successful, save the rule to the database
+    await newRule.save();
 
     res.status(201).json(newRule);
   } catch (error) {
+    console.error('Error creating rule:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -95,11 +101,11 @@ exports.activateRule = async (req, res) => {
     const subscriptionProductId = user.subscriptionProductId;
 
     let limit = 0;
-    if (subscriptionProductId === 'prod_R0b23M9NcTgjfF') { // Price id fix
+    if (subscriptionProductId === process.env.NOMI_PREMIUM_ID) { // Price id fix
       limit = Infinity;
-    } else if (subscriptionProductId === 'prod_R22J6iyXBxcFLX') {
+    } else if (subscriptionProductId === process.env.NOMI_STANDARD_ID) {
       limit = 4;
-    } else if (subscriptionProductId === 'prod_R0auXMo4nOGFkM') {
+    } else if (subscriptionProductId === process.env.NOMI_SINGLE_ID) {
       limit = 1;
     } else {
       limit = 0;
@@ -117,8 +123,9 @@ exports.activateRule = async (req, res) => {
     // Schedule the job
     const jobData = await schedulerApi.scheduleJob(rule);
 
-    if (jobData && jobData.job && jobData.job.attrs && jobData.job.attrs._id) {
-      rule.jobId = jobData.job.attrs._id;
+    if (jobData && jobData.job && jobData.job._id) {
+      rule.jobId = jobData.job._id;
+      //      console.log("newly activated rule's job id", jobData._id, jobData.data._id);
       await rule.save();
     } else {
       console.error('Failed to get jobId from scheduler response');
@@ -204,17 +211,32 @@ exports.updateRule = async (req, res) => {
 };
 
 // Delete a rule by ID
+// Import your scheduler API cancelJob method
+//const { cancelJob } = require('../schedulerApi'); // adjust the path accordingly
+
 exports.deleteRule = async (req, res) => {
   try {
-    const rule = await Rule.findByIdAndDelete(req.params.id);
+    
+    const rule = await Rule.findById(req.params.id);
+    
     if (!rule) {
       return res.status(404).json({ error: 'Rule not found' });
     }
+
+
+    if (rule.jobId) {
+      console.log(`Job ID found. Cancelling job with ID: ${rule.jobId}`);
+      await schedulerApi.cancelJob(rule.jobId); 
+    }
+    await Rule.findByIdAndDelete(req.params.id);
+
     res.status(200).json({ message: 'Rule deleted successfully' });
   } catch (error) {
+    console.error('Error deleting rule:', error);
     res.status(500).json({ error: error.message });
   }
 };
+
 
 exports.getUserRules = async (req, res) => {
   try {
@@ -245,7 +267,8 @@ exports.updateRuleJobId = async (req, res) => {
     );
 
     if (!updatedRule) {
-      return res.status(404).json({ error: 'Rule not found' });
+      // Instead of returning a 404 error, return a specific status code or message
+      return res.status(202).json({ message: 'Rule not found, jobId not updated' });
     }
 
     res.status(200).json(updatedRule);

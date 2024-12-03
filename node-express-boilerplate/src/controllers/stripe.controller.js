@@ -1,9 +1,9 @@
 // stripe.controller.js
 
-const stripe = require('stripe')("sk_test_51Q74V1FbGvhl0lO0PbkqbJBfGB1Csj9X0UHaU55S9ddUpjp8zMwUS7L9OTuzBerYOKR2ZNSvbMzZ6ASYPRCzI3lU00y2OvSp4z");
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/user.model'); // Adjust the path as needed
 
-const frontendUrlBase = "http://localhost:3000/"
+const frontendUrlBase = process.env.FRONTEND_URL
 
 function mapLookupKeyToPlan(lookupKey) {
   switch (lookupKey) {
@@ -23,14 +23,15 @@ function mapLookupKeyToPlan(lookupKey) {
 
 function mapProductIdToPlan(productId) {
   switch (productId) {
-    case "prod_R0auXMo4nOGFkM":
-      return 'Nomi Single'
-    case "prod_R22J6iyXBxcFLX":
-      return 'Nomi Standard'
-    case "prod_R0b23M9NcTgjfF":
+    case process.env.NOMI_PREMIUM_ID:
       return 'Nomi Premium'
+    case process.env.NOMI_STANDARD_ID:
+      return 'Nomi Standard'
+    case process.env.NOMI_SINGLE_ID:
+      return 'Nomi Single'
   }
 }
+
 
 // Create a checkout session for a subscription
 exports.createCheckoutSession = async (req, res) => {
@@ -104,7 +105,7 @@ async function handleSubscriptionEvent(subscription) {
 
 exports.handleWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
-  const webhookSecret = "whsec_3548ac5a67033494b94c36d4273f70c410582ebf84f4fa3bb698e2f5a0fad87e";
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   let event;
 
   try {
@@ -127,6 +128,8 @@ exports.handleWebhook = async (req, res) => {
       const subscription = event.data.object;
       await handleSubscriptionEvent(subscription);
       break;
+
+      
 
     case 'invoice.payment_succeeded':
       const invoiceSucceeded = event.data.object;

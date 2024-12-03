@@ -1,23 +1,51 @@
-/* styles/UpdateAccounts.css */
+/* src/components/settings/UpdateAccounts.css */
 
 .update-accounts {
-    padding: 20px;
-  }
-  
-  .update-accounts h5 {
-    font-weight: bold;
-  }
-  
-  .update-accounts .accordion-button {
-    font-size: 1.1rem;
-  }
-  
-  .update-accounts .list-group-item {
-    display: flex;
-    justify-content: space-between;
-  }
-  
-  .update-accounts .list-group-item strong {
-    color: #007bff;
-  }
-  
+  /* padding: 20px; */ /* Remove redundant padding if not needed */
+}
+
+.update-accounts h5 {
+  font-weight: bold;
+}
+
+.update-accounts .accordion-button {
+  font-size: 1rem; /* Adjust font size */
+  padding: 0.5rem 1rem;
+}
+
+.update-accounts .accordion-header {
+  background-color: #f8f9fa; /* Light gray background */
+}
+
+.update-accounts .bank-name {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.update-accounts .update-button {
+  /* Adjust button styles */
+  margin-left: 0.5rem;
+}
+
+.update-accounts .list-group-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.update-accounts .list-group-item strong {
+  color: #343a40;
+  font-size: 1rem;
+}
+
+.update-accounts .list-group-item .text-muted {
+  font-size: 0.9rem;
+}
+
+.update-accounts .add-account-button {
+  margin-top: 1rem;
+}
+
+.update-accounts .accordion-body {
+  padding: 0;
+}

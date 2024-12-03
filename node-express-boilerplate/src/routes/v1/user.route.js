@@ -6,6 +6,12 @@ const userController = require('../../controllers/user.controller');
 
 const router = express.Router();
 
+router.get(
+  '/subscription',
+  auth(), // Ensure the user is authenticated
+  userController.getSubscriptionDetails
+);
+
 router
   .route('/')
   .post(auth('manageUsers'), validate(userValidation.createUser), userController.createUser)
@@ -16,6 +22,7 @@ router
   .get(auth('getUsers'), validate(userValidation.getUser), userController.getUser)
   .patch(auth('manageUsers'), validate(userValidation.updateUser), userController.updateUser)
   .delete(auth('manageUsers'), validate(userValidation.deleteUser), userController.deleteUser);
+
 
 module.exports = router;
 

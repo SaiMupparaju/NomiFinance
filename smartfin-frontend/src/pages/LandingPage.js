@@ -27,10 +27,15 @@ function LandingPage() {
     }
   }, [auth])
 
+  console.log("BACKEND_URL", process.env.REACT_APP_BACKEND_URL)
+
   return (
     <div className="container d-flex justify-content-center align-items-center vh-100 position-relative">
       <div className="text-center">
-        <h1 className="mb-3">Nomi</h1>
+        <h1 className="mb-3">
+          Nomi
+          <sup style={{ fontSize: '0.7rem', color: 'green', marginLeft: '4px' }}>[Beta]</sup>
+        </h1>
         <p className="mb-4">The app to make your finances smarter</p>
         <div className="btn-container">
           <button onClick={handleRegisterClick} className="btn btn-primary">Sign Up</button>

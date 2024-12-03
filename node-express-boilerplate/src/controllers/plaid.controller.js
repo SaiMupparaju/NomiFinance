@@ -4,11 +4,14 @@ const BankAccount = require('../models/bankAccount.model');
 const UserAccountsSummary = require('../models/userAccountSummary.model');
 const LinkToken = require('../models/linkToken.model');
 const { getBankNameByAccessToken } = require('../services/BankAccountService');
+const { sendEmail } = require('../services/email.service');
+const AccountCache = require('../models/accountCache.model');
 
-const PLAID_CLIENT_ID = "66ef2c652ac9d100192cbf71";
-const PLAID_SECRET = "e1c8e85fbf43877ab29e9147b7d4b2";
+
+const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
+const PLAID_SECRET = process.env.PLAID_SECRET;
 const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
-const WEBHOOK = "https://9fcd-70-106-217-26.ngrok-free.app" //FIXME
+const WEBHOOK = process.env.PLAID_WEBHOOK; //FIXME
 
 const configuration = new Configuration({
   basePath: PlaidEnvironments[PLAID_ENV],
@@ -56,6 +59,30 @@ const getUserToken = async function (userId) {
   }
 };
 
+const getBankIncome = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    if (!user || !user.plaidAccessTokens || user.plaidAccessTokens.length === 0) {
+      return res.status(400).json({ message: 'No access tokens found for the user.' });
+    }
+
+    const plaidUserToken = user.plaidUserToken; // Adjust as needed if multiple tokens
+
+    const response = await plaidClient.creditBankIncomeGet({
+      user_token: plaidUserToken,
+      options: {
+        count: 1,
+      },
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error fetching bank income:', error);
+    res.status(500).json({ message: 'Failed to fetch bank income', error: error.toString() });
+  }
+};
+
 async function resetLogin(accessToken) {
   try {
     const response = await plaidClient.sandboxItemResetLogin({
@@ -93,6 +120,7 @@ async function getUpdateLinkToken_forItem(userId, bankName) {
 
 
     console.log('Login has been reset successfully.');
+    console.log(`redirect uri : ${process.env.FRONTEND_URL}/home`);
 
     // Create a link token for update mode
     const linkTokenResponse = await plaidClient.linkTokenCreate({
@@ -107,9 +135,9 @@ async function getUpdateLinkToken_forItem(userId, bankName) {
       products: ['auth', 'transactions'],
       language: 'en',        // Adjust as needed
       webhook: `${WEBHOOK}/v1/plaid/webhook`,
-      redirect_uri: 'http://localhost:3000/home',
+      redirect_uri: `${process.env.FRONTEND_URL}/home` ,
       access_token: accessToken,
-      country_codes: ['US'], // Adjust as needed
+      country_codes: ['US', 'CA'], // Adjust as needed
     });
 
 
@@ -123,6 +151,31 @@ async function getUpdateLinkToken_forItem(userId, bankName) {
     throw error;
   }
 }
+
+const forceItemIntoUpdateMode = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { bankName } = req.body;
+
+    // Find the access token for the specified bank
+    const bankAccount = await BankAccount.findOne({ userId, bankName });
+
+    if (!bankAccount) {
+      return res.status(404).json({ message: 'Bank account not found for the given user and bank.' });
+    }
+
+    const accessToken = bankAccount.accessToken;
+
+    // Call the resetLogin function
+    await resetLogin(accessToken);
+
+    // Send a response back to the frontend
+    res.status(200).json({ message: 'Item has been forced into update mode.' });
+  } catch (error) {
+    console.error('Error forcing item into update mode:', error);
+    res.status(500).json({ message: 'Failed to force item into update mode', error: error.toString() });
+  }
+};
 
  
 const getLinkToken = async function (req, response) {
@@ -144,6 +197,9 @@ const getLinkToken = async function (req, response) {
         const userToken = await getUserToken(req.user.id);
 
 
+        console.log(`Webhook URL: ${WEBHOOK}`);
+        console.log(`redirect uri : ${process.env.FRONTEND_URL}/home`);
+
         const plaidRequest = {
             user: {
                 client_user_id: clientUserId,
@@ -153,9 +209,9 @@ const getLinkToken = async function (req, response) {
             enable_multi_item_link: true,
             products: ['auth','transactions'],
             language: 'en',
-            redirect_uri: 'http://localhost:3000/home',
+            redirect_uri: `${process.env.FRONTEND_URL}/home`,
             webhook: `${WEBHOOK}/v1/plaid/webhook`, //MUST DO EVERY TIME LAUNCH
-            country_codes: ['US'],
+            country_codes: ['US', 'CA'],
         };
 
         const createTokenResponse = await plaidClient.linkTokenCreate(plaidRequest);
@@ -203,9 +259,9 @@ const getUpdateLinkToken = async function (req, response) {
           enable_multi_item_link: true,
           products: ['auth','transactions'],
           language: 'en',
-          redirect_uri: 'http://localhost:3000/home',
+          redirect_uri: `${process.env.FRONTEND_URL}/home`,
           webhook: `${WEBHOOK}/v1/plaid/webhook`,
-          country_codes: ['US'],
+          country_codes: ['US', 'CA'],
       };
 
       const createTokenResponse = await plaidClient.linkTokenCreate(plaidRequest);
@@ -289,15 +345,43 @@ const fetchAccounts = async (userId) => {
 
     for (const accessToken of user.plaidAccessTokens) {
       try {
+        
+        let accountCache = await AccountCache.findOne({ accessToken });
+        const now = new Date();
+        const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000); // 10 minutes ago
+
+        let accountsResponseData;
+        if (accountCache && accountCache.cacheTimestamp > tenMinutesAgo) {
+          // **Use Cached Data**
+          accountsResponseData = accountCache.accountsData;
+          console.log(`Using cached accounts data for access token ${accessToken}`);
+        }else{
+          const accountsResponse = await plaidClient.accountsGet({ access_token: accessToken });
+          accountsResponseData = accountsResponse.data;
+          // **Add or update to model**
+          if (accountCache) {
+            accountCache.accountsData = accountsResponseData;
+            accountCache.cacheTimestamp = now;
+          } else {
+            accountCache = new AccountCache({
+              accessToken,
+              accountsData: accountsResponseData,
+              cacheTimestamp: now,
+            });
+          }
+
+          await accountCache.save();
+        }
+
+
         // Fetch accounts from Plaid
-        const accountsResponse = await plaidClient.accountsGet({ access_token: accessToken });
-        const accounts = accountsResponse.data.accounts;
-        const item = accountsResponse.data.item;
+        const accounts = accountsResponseData.accounts;
+        const item = accountsResponseData.item;
 
         // Get bank name from Plaid
         const institutionResponse = await plaidClient.institutionsGetById({
           institution_id: item.institution_id,
-          country_codes: ['US'],
+          country_codes: ['US', 'CA'],
         });
         const bankName = institutionResponse.data.institution.name;
 
@@ -385,18 +469,36 @@ const fetchAccounts = async (userId) => {
 async function handlePlaidError(plaidError, accessToken, userId, bankAccounts) {
   if (plaidError.response && plaidError.response.data && plaidError.response.data.error_code) {
     const errorCode = plaidError.response.data.error_code;
+    const errorMessage = plaidError.response.data.error_message;
 
-    if (errorCode === 'ITEM_LOGIN_REQUIRED' || errorCode === 'PENDING_EXPIRATION') {
+    if (['ITEM_LOGIN_REQUIRED', 'PENDING_EXPIRATION', 'PENDING_DISCONNECT'].includes(errorCode)) {
       const bankName = await getBankNameByAccessToken(accessToken, userId);
 
       // Mark the bank with `needsUpdate` status
       bankAccounts[bankName] = [{
         bankName: bankName,
         needsUpdate: true,
-        error: plaidError.response.data.error_message,
+        error: errorMessage,
       }];
+
+      // Send email notification to the user
+      const user = await User.findById(userId);
+      if (user) {
+        const emailSubject = 'Important Info about your Nomi Account';
+        const emailBody = `
+          <p>Dear ${user.name},</p>
+          <p>We detected an issue with your linked bank account (${bankName}). Please update your account information to continue using Nomi Finance.</p>
+          <p>Error Code: ${errorCode}</p>
+          <p>Error Message: ${errorMessage}</p>
+          <p><a href="${process.env.FRONTEND_URL}/update-account">Click here to update your account.</a></p>
+          <p>Best regards,<br/>Nomi Finance Team</p>
+        `;
+
+        await sendEmail(user.email, emailSubject, emailBody);
+        console.log(`Email sent to ${user.email} regarding ${errorCode}`);
+      }
     } else {
-      console.error(`Unhandled Plaid error: ${plaidError.response.data.error_message}`);
+      console.error(`Unhandled Plaid error: ${errorMessage}`);
     }
   } else {
     console.error(`Error fetching accounts with access token ${accessToken}:`, plaidError);
@@ -450,7 +552,7 @@ const handlePlaidWebhook = async (req, res) => {
           await LinkToken.deleteOne({ _id: linkTokenRecord._id });
 
           res.status(200).send('Webhook processed successfully');
-      } else {
+        } else {
           res.status(400).send('Unhandled webhook type or code');
       }
   } catch (error) {
@@ -525,5 +627,7 @@ const getTransactions = async (userId, bankName, accountName) => {
     handlePlaidWebhook,
     getUpdateLinkToken,
     getTransactions,
-    getUpdateLinkToken_forItem
+    getUpdateLinkToken_forItem,
+    getBankIncome,
+    forceItemIntoUpdateMode
   }

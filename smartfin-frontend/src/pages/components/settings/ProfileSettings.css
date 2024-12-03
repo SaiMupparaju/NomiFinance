@@ -25,4 +25,12 @@
     padding: 0.5rem;
     font-size: 16px;
   }
+
+  .swal-wide {
+    width: 600px !important;
+  }
   
+  /* Adjust the height of the textarea */
+  .swal2-textarea {
+    height: 150px !important;
+  }

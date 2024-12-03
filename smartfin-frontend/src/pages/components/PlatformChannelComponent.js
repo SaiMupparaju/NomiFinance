@@ -9,7 +9,7 @@ function PlatformChannelComponent({ platform, handleRemovePlatform, updateChanne
     useEffect(() => {
         const fetchChannels = async () => {
             try {
-                const { data } = await axios.get(`http://localhost:3001/v1/platform/${platform.toLowerCase()}/channels`, {
+                const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/v1/platform/${platform.toLowerCase()}/channels`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
                 });
                 console.log("Channels", data.channels);

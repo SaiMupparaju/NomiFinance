@@ -3,10 +3,15 @@ const validator = require('validator');
 const bcrypt = require('bcryptjs');
 const { toJSON, paginate } = require('./plugins');
 const { roles } = require('../config/roles');
-
-
+const schedulerApi = require('../utils/schedulerApi');
 
 const BankAccount = require('./bankAccount.model');
+const UserAccountSummary = require('./userAccountSummary.model');
+const Transaction = require('./transactions.model');
+const Rule = require('./Rule');
+const LinkToken = require('./linkToken.model');
+
+
 
 //module.exports = mongoose.model('BankAccount', BankAccountSchema);
 
@@ -89,8 +94,61 @@ const userSchema = mongoose.Schema({
     type: String,
     default: null,
   },
+  subscriptionCurrentPeriodEnd: { type: Date },
+  subscriptionCanceledAt: { type: Date },
+  lastPaymentStatus: { type: String },
+  lastPaymentDate: { type: Date },  
+  lastPaymentFailureDate: { type: Date }
+  
 }, {
   timestamps: true
+});
+
+userSchema.pre('findOneAndDelete', async function (next) {
+  const userId = this.getQuery()._id;
+
+  try {
+    // Delete BankAccounts
+    await BankAccount.deleteMany({ userId });
+
+    // Delete UserAccountSummary
+    await UserAccountSummary.deleteOne({ userId });
+
+    // Delete Transactions
+    await Transaction.deleteMany({ userId });
+
+    // Fetch Rules where the user is either the creator or subscriber
+    const rules = await Rule.find({
+      $or: [{ creatorId: userId }, { subscriberId: userId }],
+    });
+
+    // Collect promises for cancelling jobs
+    const cancelJobPromises = rules.map(async (rule) => {
+      if (rule.jobId) {
+        try {
+          await schedulerApi.cancelJob(rule.jobId);
+        } catch (error) {
+          console.error(`Error canceling job for rule ${rule._id}:`, error);
+          // Optionally handle the error
+        }
+      }
+    });
+
+    // Cancel all jobs concurrently
+    await Promise.all(cancelJobPromises);
+
+    // Delete the rules after canceling jobs
+    await Rule.deleteMany({
+      $or: [{ creatorId: userId }, { subscriberId: userId }],
+    });
+
+    // Delete LinkTokens
+    await LinkToken.deleteMany({ userId });
+
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 // add plugin that converts mongoose to json

@@ -10,8 +10,8 @@ class EmailService {
             port: 587,
             secure: false, // true for 465, false for other ports
             auth: {
-                user: 'postmaster@sandbox50a0776f6a664421bf6ca474029a8c00.mailgun.org', // your Gmail email
-                pass: '7275b863ceb8407dec3ba8c0af983c32-777a617d-c01a0da4'   // your Gmail password or App Password
+                user: 'postmaster@mg.nomifinance.com', // your Gmail email
+                pass: '811ee3b1812ef0142872b7d432aec11e-6df690bb-6783f095'   // your Gmail password or App Password
             }
         });
     }
@@ -19,7 +19,7 @@ class EmailService {
     async sendEmail(to, subject, text) {
         try {
             const info = await this.transporter.sendMail({
-                from: 'postmaster@sandbox50a0776f6a664421bf6ca474029a8c00.mailgun.org', // sender address
+                from: 'sophia@mg.nomifinance.com', // sender address
                 to: to, // list of receivers
                 subject: subject, // Subject line
                 text: text, // plain text body

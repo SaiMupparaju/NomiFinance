@@ -1,10 +1,11 @@
 // src/index.js
 //const calculateNextRunTime = req
+require('dotenv').config();
 const app = require('./app');
 const agenda = require('./agenda');
 
 const PORT = 3002;
-
+//console.log("backend", process.env.REACT_APP_BACKEND_API_URL);
 app.listen(PORT, () => {
   console.log(`Scheduler server running on http://localhost:${PORT}`);
 });

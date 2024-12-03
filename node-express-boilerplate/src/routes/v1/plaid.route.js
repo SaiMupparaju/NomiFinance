@@ -16,6 +16,9 @@ router.post('/exchange-public-token', auth(), plaidController.exchangePublicToke
 router.get('/accounts', auth(), plaidController.getAccounts);
 router.post('/webhook/', plaidController.handlePlaidWebhook);
 router.get('/get-update-link-token', auth(), plaidController.getUpdateLinkToken);
+router.post('/credit/bank_income/get', auth(), plaidController.getBankIncome);
+router.post('/force-reset-login', auth(), plaidController.forceItemIntoUpdateMode);
+
 
 router.post('/create_update_link_token', async (req, res) => {
   const { userId, bankName } = req.body;

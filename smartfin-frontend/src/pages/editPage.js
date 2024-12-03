@@ -12,6 +12,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './styles/CreateRulePage.css';
 import { createRule, getRuleById, updateRule } from '../utils/rule_api'; // Import the createRule function
 import {Button} from 'react-bootstrap';
+import Swal from 'sweetalert2';
+
 
 function EditRulePage() {
   const { auth } = useAuth();
@@ -19,11 +21,13 @@ function EditRulePage() {
   const { ruleId } = useParams(); // Get rule ID from URL if present
   const navigate = useNavigate();
   const location = useLocation();
+  const userRules = location.state?.userRules || [];
 
   const [executionTime, setExecutionTime] = useState('immediately');
   const [ruleName, setRuleName] = useState('');
   const [conditions, setConditions] = useState([]);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [color, setColor] = useState('#000000');
   const [event, setEvent] = useState(null);
   const [schedule, setSchedule] = useState({
     events: [],
@@ -53,6 +57,7 @@ function EditRulePage() {
         setConditions(ruleData.conditions.all); //sets conditions to the value that mainif works with this is the if statements separated by operator
         setEvent(ruleData.event);
         setSchedule({ ...schedule, ...ruleData.schedule });
+        setColor(ruleData.color);
         //console.log("edit rule PAGE sched:", schedule);
         setButtonText("Save Rule");
       };
@@ -105,6 +110,14 @@ function EditRulePage() {
         if (condition.value.fact.includes('expenses') && (!condition.value.params || !condition.value.params.categories || condition.value.params.categories.length === 0)) {
           return { isValid: false, message: 'Expenses condition requires categories to be selected.' };
         }
+
+        if ((condition.fact.includes('income')&&condition.fact.includes('from')) && (!condition.params || !condition.params.incomes || condition.params.incomes.length === 0)) {
+          return { isValid: false, message: 'When you want the rule to calculate your incomes from specific sources, you must specify from where!' };
+        }
+
+        if ((condition.value.fact.includes('income')&&condition.value.fact.includes('from')) && (!condition.value.params || !condition.value.params.incomes || condition.value.params.incomes.length === 0)) {
+          return { isValid: false, message: 'When you want the rule to calculate your incomes from specific sources, you must specify from where!' };
+        }
       }
     }
   
@@ -137,36 +150,85 @@ function EditRulePage() {
   };
 
   const handleCreateOrUpdateRule = async () => {
+    if (!auth.user) {
+      Swal.fire({
+        title: 'Sign Up Required',
+        text: 'Please sign up to start creating rules.',
+        icon: 'info',
+        confirmButtonText: 'Go to Sign Up',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/register');
+        }
+      });
+      return;
+    }
+  
     const rule = {
       name: ruleName,
-      conditions: {all : conditions}, // Pass the entire conditions object
+      conditions: { all: conditions },
       event: event,
       schedule: schedule,
     };
-    console.log("rule", rule);
+  
     const error = validateRule(rule);
     if (error) {
       setErrorMessage(error);
       return;
     }
-
+  
     try {
-      if (ruleId) {
-        await updateRule(ruleId, {
-          creatorId: auth.user.id,
-          subscriberId: auth.user.id,
-          rule: rule,
-        });
+      // Use the passed-in userRules instead of making an API call
+      const activeRules = userRules.filter((rule) => rule.isActive);
+  
+      // Determine subscription limit
+      let limit = 0;
+      const subscriptionProductId = auth.user.subscriptionProductId;
+  
+      if (subscriptionProductId === process.env.REACT_APP_NOMI_PREMIUM) {
+        limit = Infinity; // Premium has no limit
+      } else if (subscriptionProductId === process.env.REACT_APP_NOMI_STANDARD) {
+        limit = 4; // Standard subscription limit
+      } else if (subscriptionProductId === process.env.REACT_APP_NOMI_SINGLE) {
+        limit = 1; // Single subscription limit
       } else {
-        await createRule({
-          creatorId: auth.user.id,
-          subscriberId: auth.user.id,
-          rule: rule,
+        limit = 0; // No subscription
+      }
+  
+      let isActive = true;
+  
+      if (activeRules.length >= limit) {
+        isActive = false;
+        await Swal.fire({
+          title: 'Subscription Limit Reached',
+          text: `You have reached the limit of ${limit} active rules for your subscription. The rule will be created but turned off.`,
+          icon: 'warning',
+          confirmButtonText: 'OK',
         });
+      }
+  
+      const newRuleData = {
+        creatorId: auth.user.id,
+        subscriberId: auth.user.id,
+        rule: rule,
+        isActive: isActive,
+      };
+  
+      if (ruleId) {
+        await updateRule(ruleId, newRuleData);
+      } else {
+        await createRule(newRuleData);
       }
       navigate('/home');
     } catch (error) {
       console.error('Failed to create/update rule:', error.message);
+      console.error('Failed to create/update rule:', error.message);
+      Swal.fire({
+        title: 'Error Creating Rule',
+        text: 'There was an issue creating your rule. Please try again later.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+      });
     }
   };
 
@@ -234,6 +296,9 @@ function EditRulePage() {
           </Accordion.Body>
         </Accordion.Item>
       </Accordion>
+      <div className="mt-3">
+        {errorMessage && <Alert variant="danger">{errorMessage}</Alert>}
+      </div>
       <div className="mt-3 text-end">
         <Button variant="primary" onClick={handleCreateOrUpdateRule}>
           {buttonText}

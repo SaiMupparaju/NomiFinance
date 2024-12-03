@@ -19,6 +19,8 @@ const BankAccountSchema = new mongoose.Schema({
   transactions: { type: Array, default: [] }, // Store transaction data
   lastTransactionFetch: { type: Date, default: null },
   lastUpdated: { type: Date, default: Date.now },
+  accountsCacheTimestamp: { type: Date, default: null },
+  accountsCacheData: mongoose.Schema.Types.Mixed, // Stores accounts data
 }, { timestamps: true });
 
 BankAccountSchema.pre('save', function (next) {

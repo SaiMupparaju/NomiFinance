@@ -14,6 +14,7 @@ const createUser = async (userBody) => {
   return User.create(userBody);
 };
 
+
 /**
  * Query for users
  * @param {Object} filter - Mongo filter
@@ -71,12 +72,11 @@ const updateUserById = async (userId, updateBody) => {
  * @returns {Promise<User>}
  */
 const deleteUserById = async (userId) => {
-  const user = await getUserById(userId);
+  const user = await User.findByIdAndDelete(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
-  await user.remove();
-  return user;
+  // The pre('findOneAndDelete') middleware will handle the cascade deletion
 };
 
 module.exports = {

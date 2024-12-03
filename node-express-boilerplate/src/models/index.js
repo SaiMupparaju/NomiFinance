@@ -6,3 +6,5 @@ module.exports.BankAccount = require('./bankAccount.model');
 module.exports.Rate = require('./rate.model');
 module.exports.UserAccountsSummary = require('./userAccountSummary.model');
 module.exports.Suggestion =require('./suggestion.model');
+module.exports.InstitutionCache = require('./institutionCache.model');
+module.exports.AccountCache = require('./accountCache.model');

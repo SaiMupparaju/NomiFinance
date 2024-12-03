@@ -1,12 +1,13 @@
 // src/agenda.js
+require('dotenv').config();
 const { Agenda } = require('agenda');
 const { Engine } = require('json-rules-engine');
 const axios = require('axios');
 const emailService = require('./services/emailService');
 const TextService = require('./services/smsService');
-const mongoConnectionString = 'mongodb://127.0.0.1:27017/node-boilerplate';
+const mongoConnectionString = `${process.env.MONGO_CONNECTION_STRING}`;
 const agenda = new Agenda({ db: { address: mongoConnectionString , collection: 'agendaJobs'} });
-const backendBaseUrl = 'http://localhost:3001/v1';
+const backendBaseUrl = `${process.env.REACT_APP_BACKEND_API_URL}/v1`;
 const crypto = require('crypto');
 const rulesEngine = require('rules-engine');
 const { DateTime } = require('luxon');
@@ -386,6 +387,7 @@ agenda.define('execute rule', async (job) => {
 agenda.on('ready', async () => {
   const { DateTime } = require('luxon');
   console.log("Agenda started up testing next date function...");
+  console.log("backend", process.env.REACT_APP_BACKEND_API_URL);
 
   const sched = {
     frequency: "ontruth",

@@ -21,7 +21,7 @@ router.post('/schedule', async (req, res) => {
     //console.log("rule:", rule, "sched:", schedule);
 
     const job = await scheduleService.scheduleJob(req.body); //passes in ruleMongObj
-    console.log("job response:", job);
+    //console.log("job response:", job);
     res.status(201).json({ message: 'Job scheduled', job });
     } catch (error) {
     console.error('Error scheduling job:', error);
@@ -47,7 +47,7 @@ router.put('/schedule/:id', async (req, res) => {
 router.delete('/schedule/:id', async (req, res) => {
   try {
     const jobId = req.params.id;
-    console.log("Deleting job with id", jobId);
+    //console.log("Deleting job with id", jobId);
     await scheduleService.cancelJob(jobId);
     res.status(200).json({ message: 'Job canceled' });
   } catch (error) {

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate , Link} from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+import { privacyPolicy } from '../privacyPolicy'; // Ensure this is correctly exported
 
 function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -10,8 +13,10 @@ function RegisterPage() {
         confirmPassword: ''
     });
     const [error, setError] = useState('');
-    const { register, loginWithGoogle } = useAuth();
+    const [hasAcceptedPolicy, setHasAcceptedPolicy] = useState(false);
+    const { register } = useAuth();
     const navigate = useNavigate();
+    const MySwal = withReactContent(Swal);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -41,6 +46,11 @@ function RegisterPage() {
         event.preventDefault();
         setError('');
 
+        if (!hasAcceptedPolicy) {
+            setError('You must accept the privacy policy before registering.');
+            return;
+        }
+
         if (formData.password !== formData.confirmPassword) {
             setError('Passwords do not match');
             return;
@@ -59,13 +69,58 @@ function RegisterPage() {
         }
     };
 
-    const handleGoogleSignUp = async () => {
-        try {
-            await loginWithGoogle();
-            navigate('/home');
-        } catch (error) {
-            setError('Google sign-up failed');
+    const handleAcceptPolicyClick = (e) => {
+        if (!hasAcceptedPolicy) {
+            e.preventDefault();
+            showPrivacyPolicy();
+        } else {
+            setHasAcceptedPolicy(false);
         }
+    };
+
+    const showPrivacyPolicy = () => {
+        MySwal.fire({
+            title: 'Privacy Policy',
+            html: `
+                <div style="height: 400px; overflow-y: hidden;">
+                    <iframe
+                        src="/privacypolicy.pdf"
+                        style="width: 100%; height: 100%; border: none;"
+                    ></iframe>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Accept',
+            confirmButtonColor: '#3085d6',
+            cancelButtonText: 'Cancel',
+            cancelButtonColor: '#d33',
+            showConfirmButton: true,
+            didOpen: (popup) => {
+                const acceptButton = MySwal.getConfirmButton();
+                acceptButton.disabled = true;
+    
+                const iframe = popup.querySelector('iframe');
+    
+                // Listen for the user scrolling within the PDF (only works in supported browsers)
+                iframe.addEventListener('load', () => {
+                    const checkScroll = setInterval(() => {
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            if (iframeDoc.scrollingElement.scrollTop + iframeDoc.scrollingElement.clientHeight >= iframeDoc.scrollingElement.scrollHeight - 5) {
+                                acceptButton.disabled = false;
+                                clearInterval(checkScroll);
+                            }
+                        } catch (error) {
+                            console.error('Cross-origin iframe access issue:', error);
+                        }
+                    }, 500);
+                });
+            },
+        }).then((result) => {
+            if (result.isConfirmed) {
+                setHasAcceptedPolicy(true);
+            }
+        });
     };
 
     return (
@@ -122,11 +177,24 @@ function RegisterPage() {
                             required
                         />
                     </div>
+
+                    <div className="mb-3 form-check">
+                        <input
+                            type="checkbox"
+                            className="form-check-input"
+                            id="acceptPolicy"
+                            checked={hasAcceptedPolicy}
+                            onClick={handleAcceptPolicyClick}
+                        />
+                        <label className="form-check-label" htmlFor="acceptPolicy">
+                            I accept the Privacy Policy
+                        </label>
+                    </div>
+
                     <button type="submit" className="btn btn-primary w-100 mb-3">Register</button>
 
                 </form>
 
-                {/* Add the "Already have an account?" text with a login link */}
                 <div className="text-center mt-3">
                     Already have an account? <Link to="/login">Login</Link>
                 </div>

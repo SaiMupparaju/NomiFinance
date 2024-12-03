@@ -1,0 +1,51 @@
+service: nomi-express
+
+provider:
+  name: aws
+  runtime: nodejs20.x # or whichever version you're using
+  stage: prod # adjust as needed
+  region: us-east-1 # adjust as needed
+  environment:
+    PORT: 3001
+    MONGODB_URL: mongodb+srv://nomifinance12:ShanghaiChilliCrab3.14@nomi-serverlessinstance.y0jbxob.mongodb.net/
+    FRONTEND_URL: http://3.131.162.221
+    SCHEDULE_URL: http://18.218.214.134:3002/schedule
+    TASKER_API_KEY: 945c1bbf30759babfc9ea41e5f92918c95ba54298afc49afc36b3639867029f9
+    PLAID_ENV: sandbox
+    PLAID_CLIENT_ID: 66ef2c652ac9d100192cbf71
+    PLAID_SECRET: e1c8e85fbf43877ab29e9147b7d4b2
+    PLAID_WEBHOOK: https://jcoh9ddsih.execute-api.us-east-1.amazonaws.com/prod
+    STRIPE_WEBHOOK_SECRET: whsec_3548ac5a67033494b94c36d4273f70c410582ebf84f4fa3bb698e2f5a0fad87e
+    JWT_SECRET: thisisasamplesecret
+    JWT_ACCESS_EXPIRATION_MINUTES: 30
+    JWT_REFRESH_EXPIRATION_DAYS: 30
+    JWT_RESET_PASSWORD_EXPIRATION_MINUTES: 10
+    JWT_VERIFY_EMAIL_EXPIRATION_MINUTES: 10
+    SMTP_HOST: email-server
+    SMTP_PORT: 587
+    SMTP_USERNAME: email-server-username
+    SMTP_PASSWORD: email-server-password
+    EMAIL_FROM: support@yourapp.com
+
+# Function configuration
+functions:
+  app:
+    handler: src/app.handler
+    timeout: 30 # Adjust as needed
+    events:
+      - http:
+          path: /{proxy+}
+          method: any
+
+
+custom:
+  webpack:
+    webpackConfig: './webpack.config.js'
+    includeModules: true
+
+package:
+  exclude:
+    - node_modules/**
+    - .git/**
+    - .vscode/**
+    - .env

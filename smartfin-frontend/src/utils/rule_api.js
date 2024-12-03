@@ -1,6 +1,6 @@
 import axiosInstance from './axiosInstance';
 
-const API_URL = 'http://localhost:3001/v1/rules'; // Adjust if your API URL is different
+const API_URL = `${process.env.REACT_APP_BACKEND_URL}/v1/rules`; // Adjust if your API URL is different
 
 // Create a new rule
 export const createRule = async (ruleData) => {

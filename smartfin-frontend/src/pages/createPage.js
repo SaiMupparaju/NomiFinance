@@ -22,6 +22,7 @@ function CreateRulePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const userRules = location.state?.userRules || [];
+  const hasBankAccounts = location.state?.hasBankAccounts ?? false;
 
   const [executionTime, setExecutionTime] = useState('immediately');
   const [ruleName, setRuleName] = useState('');
@@ -122,18 +123,27 @@ const initialEvent = useMemo(() => {
   
         // Validate value (ensure value is properly structured)
         if ((condition.value === null || condition.value === 0) && !condition.value.fact) {
-          return { isValid: false, message: 'Of of your conditions is empty!' };
+          return { isValid: false, message: 'One of your conditions is empty!' };
         }
   
         
         // Special validation for expenses categories
         if (condition.fact.includes('expenses') && (!condition.params || !condition.params.categories || condition.params.categories.length === 0)) {
-          return { isValid: false, message: 'Expenses condition requires categories to be selected.' };
+          return { isValid: false, message: 'When you want the rule to calculate your expenses, you must select the categories!' };
         }
 
         if (condition.value.fact.includes('expenses') && (!condition.value.params || !condition.value.params.categories || condition.value.params.categories.length === 0)) {
-          return { isValid: false, message: 'Expenses condition requires categories to be selected.' };
+          return { isValid: false, message: 'When you want the rule to calculate your expenses, you must select the categories!' };
         }
+
+        if ((condition.fact.includes('income')&&condition.fact.includes('from')) && (!condition.params || !condition.params.incomes || condition.params.incomes.length === 0)) {
+          return { isValid: false, message: 'When you want the rule to calculate your incomes from specific sources, you must specify from where!' };
+        }
+
+        if ((condition.value.fact.includes('income')&&condition.value.fact.includes('from')) && (!condition.value.params || !condition.value.params.incomes || condition.value.params.incomes.length === 0)) {
+          return { isValid: false, message: 'When you want the rule to calculate your incomes from specific sources, you must specify from where!' };
+        }
+
       }
     }
   
@@ -179,6 +189,20 @@ const initialEvent = useMemo(() => {
       });
       return;
     }
+
+    if (!hasBankAccounts) {
+      Swal.fire({
+        title: 'Bank Account Required',
+        text: 'Please connect a bank account to create rules.',
+        icon: 'warning',
+        confirmButtonText: 'Connect Now',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate('/connect-banks');
+        }
+      });
+      return; // Prevent further execution
+    }
   
     const rule = {
       name: ruleName,
@@ -201,11 +225,11 @@ const initialEvent = useMemo(() => {
       let limit = 0;
       const subscriptionProductId = auth.user.subscriptionProductId;
   
-      if (subscriptionProductId === 'prod_R0b23M9NcTgjfF') {
+      if (subscriptionProductId === process.env.REACT_APP_NOMI_PREMIUM) {
         limit = Infinity; // Premium has no limit
-      } else if (subscriptionProductId === 'prod_R22J6iyXBxcFLX') {
+      } else if (subscriptionProductId === process.env.REACT_APP_NOMI_STANDARD) {
         limit = 4; // Standard subscription limit
-      } else if (subscriptionProductId === 'prod_R0auXMo4nOGFkM') {
+      } else if (subscriptionProductId === process.env.REACT_APP_NOMI_SINGLE) {
         limit = 1; // Single subscription limit
       } else {
         limit = 0; // No subscription
@@ -238,6 +262,13 @@ const initialEvent = useMemo(() => {
       navigate('/home');
     } catch (error) {
       console.error('Failed to create/update rule:', error.message);
+      console.error('Failed to create/update rule:', error.message);
+      Swal.fire({
+        title: 'Error Creating Rule',
+        text: 'There was an issue creating your rule. Please try again later.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+      });
     }
   };
 

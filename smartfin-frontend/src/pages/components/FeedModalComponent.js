@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import PlatformChannelComponent from './PlatformChannelComponent';
 
+
+
 function FeedModalComponent({ showFeedModal, toggleFeedModal, handleCreateFeed }) {
     const [feedName, setFeedName] = useState('');
     const [feedDescription, setFeedDescription] = useState('');
@@ -16,6 +18,8 @@ function FeedModalComponent({ showFeedModal, toggleFeedModal, handleCreateFeed }
     const [weeklyTime, setWeeklyTime] = useState('08:00');
     const [selectedChannels, setSelectedChannels] = useState({});
 
+
+    
     const resetForm = () => {
         setFeedName('');
         setFeedDescription('');
@@ -39,7 +43,7 @@ function FeedModalComponent({ showFeedModal, toggleFeedModal, handleCreateFeed }
 
     const fetchPlatforms = async () => {
         try {
-            const { data } = await axios.get('http://localhost:3001/v1/platform/connected', {
+            const { data } = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/v1/platform/connected`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
             console.log(data);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Cascader, Button, Select, InputNumber } from 'antd';
 
 const { Option } = Select;
@@ -13,6 +13,8 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [showIncomes, setShowIncomes] = useState(false);
   const [selectedIncomes, setSelectedIncomes] = useState([]);
+  const [lastKeyPressTime, setLastKeyPressTime] = useState(0);
+  const [inputDisabled, setInputDisabled] = useState(false);
 
   const availableCategories = [
     { label: 'Transfers Out', value: 'TRANSFERS_OUT' },
@@ -81,6 +83,21 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
     }
   }, [value, params]);
 
+  const handleKeyDown = (e) => {
+    const currentTime = Date.now();
+    const timeSinceLastKeyPress = currentTime - lastKeyPressTime;
+  
+    const typingInterval = 75; // Time in milliseconds (adjust as needed)
+  
+    if (timeSinceLastKeyPress < typingInterval) {
+      // Prevent the key press
+      e.preventDefault();
+    } else {
+      // Update the last key press time
+      setLastKeyPressTime(currentTime);
+    }
+  };
+
   const onChange = (valueArray) => {
     setTempValue(valueArray);
     setConfirmVisible(true);
@@ -141,17 +158,31 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
 
   const handleCustomValueChange = (value) => {
     setCustomValue(value);
-    handleConfirm();
   
-    // Automatically update custom value in params, keeping 0 if needed
+    // Disable the input
+    setInputDisabled(true);
+  
+    // Re-enable after a delay
+    setTimeout(() => {
+      setInputDisabled(false);
+    }, 200); // Time in milliseconds
+  
+    // Update condition
     if (prop === 'value') {
-      updateCondition(sectionIndex, conditionIndex, `${prop}.params`, { customValue: value , currency: selectedCurrency });
+      updateCondition(sectionIndex, conditionIndex, `${prop}.params`, {
+        customValue: value,
+        currency: selectedCurrency,
+      });
     } else {
-      updateCondition(sectionIndex, conditionIndex, 'params', { customValue: value, currency: selectedCurrency });
+      updateCondition(sectionIndex, conditionIndex, 'params', {
+        customValue: value,
+        currency: selectedCurrency,
+      });
     }
   
-    setSelectedCategories([]);  // Clear selected categories when custom value is set
+    setSelectedCategories([]); // Clear selected categories when custom value is set
   };
+  
 
   const handleCurrencyChange = (currency) => {
     setSelectedCurrency(currency);
@@ -199,6 +230,7 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
         style={{ flex: 1, minWidth: '200px' }}
         changeOnSelect
         showSearch
+        allowClear={false}
       />
 
         {showCategories && (
@@ -252,6 +284,10 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
             onChange={handleCustomValueChange}
             placeholder="Enter custom value"
             style={{ flex: 1, minWidth: '200px' }}
+            // parser={(value) => value.replace(/[^\d.\d]/g, '')} // Allow only digits and decimal points
+            // formatter={(value) => (value ? String(value).replace(/[^\d.\d]/g, '') : '')} // Allow display of decimals
+            onKeyDown={handleKeyDown}
+            //disabled={inputDisabled} 
           />
 
           <Select

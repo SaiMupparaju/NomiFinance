@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Button, Accordion, ListGroup } from 'react-bootstrap';
+// src/components/settings/UpdateAccounts.js
+
+import React, { useState } from 'react'; 
+import { Button, Accordion, ListGroup, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { usePlaidLink } from 'react-plaid-link';
 import { FaSyncAlt, FaExclamationTriangle } from 'react-icons/fa';
 import { useAuth } from '../../../contexts/AuthContext';
 import axiosInstance from '../../../utils/axiosInstance'; // Use axios for authenticated requests
 import Swal from 'sweetalert2'; // Import SweetAlert2
 import withReactContent from 'sweetalert2-react-content';
+import './UpdateAccounts.css'; // Make sure to import the CSS file
 
 const PlaidLinkUpdate = ({ linkToken, onSuccess, onExit }) => {
   const config = {
@@ -128,27 +131,44 @@ const UpdateAccounts = ({ bankAccounts }) => {
         {bankAccounts &&
           Object.keys(bankAccounts).map((bankName, idx) => (
             <Accordion.Item eventKey={idx.toString()} key={bankName}>
-              <Accordion.Header className="d-flex align-items-center justify-content-between">
-                <span className="bank-name">{bankName}</span>
-                <div className="d-flex align-items-center">
-                  <Button
-                    variant="link"
-                    className="update-button"
-                    onClick={() => handleUpdateAccount(bankName)}
-                  >
-                    <FaSyncAlt />
-                  </Button>
-                  {/* Display hazard icon if the bank needs an update */}
-                  {bankAccounts[bankName].some(account => account.needsUpdate) && (
-                    <FaExclamationTriangle className="text-warning ms-2" />
-                  )}
+              <Accordion.Header>
+                <div className="d-flex align-items-center justify-content-between w-100">
+                  <span className="bank-name">{bankName}</span>
+                  <div className="d-flex align-items-center">
+                    <OverlayTrigger
+                      placement="top"
+                      overlay={<Tooltip>Update Account</Tooltip>}
+                    >
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        className="update-button"
+                        onClick={() => handleUpdateAccount(bankName)}
+                      >
+                        Update
+                      </Button>
+                    </OverlayTrigger>
+                    {/* Display hazard icon if the bank needs an update */}
+                    {bankAccounts[bankName].some(account => account.needsUpdate) && (
+                      <FaExclamationTriangle className="text-warning ms-2" />
+                    )}
+                  </div>
                 </div>
               </Accordion.Header>
               <Accordion.Body>
                 <ListGroup variant="flush">
                   {bankAccounts[bankName].map((account) => (
-                    <ListGroup.Item key={account.accountId}>
-                      <strong>{account.accountName}</strong> - {account.type}
+                    <ListGroup.Item key={account.account_id}>
+                      <div className="d-flex justify-content-between">
+                        <div>
+                          <strong>{account.name}</strong><strong>{account.name}</strong>
+                          <div className="text-muted">{account.type}</div>
+                          {account.balance && (
+                            <div className="text-muted">Balance: ${account.balance.toFixed(2)}</div>
+                          )}
+                        </div>
+                        {/* Optionally add account balance or other details */}
+                      </div>
                     </ListGroup.Item>
                   ))}
                 </ListGroup>
@@ -157,8 +177,8 @@ const UpdateAccounts = ({ bankAccounts }) => {
           ))}
       </Accordion>
 
-      <Button variant="primary" onClick={handleAddNewAccount}>
-        ADD NEW ITEM
+      <Button variant="primary" className="mt-3" onClick={handleAddNewAccount}>
+        Add New Account
       </Button>
 
       {/* Render Plaid Link for adding a new account */}

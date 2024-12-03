@@ -1,6 +1,8 @@
+import axios from 'axios';
 import axiosInstance from './axiosInstance';
+import axiosPublic from './axiosPublic';
 
-const API_URL = 'http://localhost:3001/v1'; // Adjust if your API is at a different URL
+const API_URL = `${process.env.REACT_APP_BACKEND_URL}/v1`; // Adjust if your API is at a different URL
 
 export const login = async (email, password) => {
     try {
