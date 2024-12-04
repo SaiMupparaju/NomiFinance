@@ -1,3 +1,4 @@
+//user.controller.js: 
 const httpStatus = require('http-status');
 const pick = require('../utils/pick');
 const ApiError = require('../utils/ApiError');
@@ -5,6 +6,7 @@ const catchAsync = require('../utils/catchAsync');
 const DeleteReason = require('../models/deleteReason.model');
 const { userService } = require('../services');
 const {User} = require('../models');
+const {cleanupUserSubscription} = require('../utils/SubscriptionCleanup');
 
 
 const getUserSubscriptionById = async (id) => {
@@ -77,20 +79,40 @@ const deleteUser = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  // Save the reason if provided
-  const { reason } = req.body;
-  if (reason && reason.trim() !== '') {
-    await DeleteReason.create({
-      userId: user._id,
-      email: user.email,
-      reason: reason.trim(),
-    });
+  try {
+    // Handle subscription cleanup if it exists
+    if (user.subscriptionId && user.stripeCustomerId) {
+      await cleanupUserSubscription(user);
+    }
+
+    // Save the delete reason if provided
+    const { reason } = req.body;
+    if (reason && reason.trim() !== '') {
+      await DeleteReason.create({
+        userId: user._id,
+        email: user.email,
+        reason: reason.trim(),
+      });
+    }
+
+    // Delete the user (this will trigger the cascade)
+    await userService.deleteUserById(userId);
+
+    res.status(httpStatus.NO_CONTENT).send();
+  } catch (error) {
+    console.error('Error during user deletion:', error);
+    if (error.type === 'StripeError') {
+
+      console.error('Stripe cleanup failed but proceeding with user deletion:', error);
+      await userService.deleteUserById(userId);
+      res.status(httpStatus.NO_CONTENT).send();
+    } else {
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        'Failed to delete user account'
+      );
+    }
   }
-
-  // Delete the user (this will trigger the cascade)
-  await userService.deleteUserById(userId);
-
-  res.status(httpStatus.NO_CONTENT).send();
 });
 
 

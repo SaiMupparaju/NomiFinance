@@ -76,26 +76,133 @@ function Home() {
   }, [auth]);
 
   useEffect(() => {
-    if (auth.user && Array.isArray(bankAccounts)) {
-      const anyBankNeedsUpdate = bankAccounts.length > 0 && bankAccounts.some(bank =>
-        Array.isArray(bank) && bank.some(account => account.needsUpdate)
+    if (auth.user && bankAccounts) {
+      const bankWithErrors = Object.entries(bankAccounts).find(([bankName, accounts]) =>
+        accounts.some(account => account.needsUpdate)
       );
-      setBanksNeedUpdate(anyBankNeedsUpdate);
-      console.log("Does a Bank need updating?", anyBankNeedsUpdate);
+  
+      if (bankWithErrors) {
+        const [bankName] = bankWithErrors;
+        Swal.fire({
+          title: 'Account Update Required',
+          text: `Your ${bankName} connection needs to be updated. Would you like to update it now?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Update Now',
+          cancelButtonText: 'Remind Me Later',
+          showDenyButton: process.env.REACT_APP_ENV === 'development',
+          denyButtonText: 'Test Force Update (Dev)',
+        }).then(async (result) => {
+          if (result.isConfirmed) {
+            setShowSettingsModal(true);
+          } else if (result.isDenied && process.env.REACT_APP_ENV === 'development') {
+            try {
+              await axiosInstance.post('/plaid/force-reset-login', {
+                bankName: bankName,
+              });
+              await refreshAccounts();
+            } catch (error) {
+              console.error('Error forcing update mode:', error);
+            }
+          }
+        });
+      }
     }
   }, [bankAccounts, auth.user]);
+
+  const TestControls = () => {
+    if (process.env.REACT_APP_ENV !== 'development') return null;
+  
+    return (
+      <div className="test-controls mb-3">
+        <Button 
+          variant="warning" 
+          size="sm"
+          onClick={handleForceUpdateMode}
+          className="me-2"
+        >
+          Force Update Mode (Test)
+        </Button>
+      </div>
+    );
+  };
+
+  const handleForceUpdateMode = async () => {
+    console.log("force update pressed");
+    try {
+
+      if (!bankAccounts) {
+        console.log("No bank accounts found");
+        return;
+      }
+      console.log("Available banks:", Object.keys(bankAccounts));
+      
+      const bankNames = Object.keys(bankAccounts);
+      let selectedBank;
+  
+      if (bankNames.length > 1) {
+        const { value: bankName } = await Swal.fire({
+          title: 'Select Bank',
+          input: 'select',
+          inputOptions: bankNames.reduce((acc, bank) => {
+            acc[bank] = bank;
+            return acc;
+          }, {}),
+          inputPlaceholder: 'Select a bank',
+          showCancelButton: true,
+        });
+        
+        if (bankName) {
+          selectedBank = bankName;
+        }
+      } else if (bankNames.length === 1) {
+        selectedBank = bankNames[0];
+      }
+  
+      if (selectedBank) {
+        console.log("Selected bank:", selectedBank);
+        const response = await axiosInstance.post('/plaid/force-reset-login', {
+          bankName: selectedBank,
+        });
+        console.log("API Response:", response);
+        
+        Swal.fire({
+          title: 'Success',
+          text: 'Account forced into update mode. Refreshing data...',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+  
+        await refreshAccounts();
+      } else {
+        console.log("No bank was selected");
+      }
+    } catch (error) {
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to force update mode',
+        icon: 'error'
+      });
+    }
+  };
 
   useEffect(() => {
     console.log("HOME fact tree", factTree);
     console.log("HOME bank accounts", bankAccounts);
   }, [factTree, bankAccounts])
 
-  useEffect(() => {
-    if (banksNeedUpdate) {
-      alert('Some of your bank accounts need to be updated.');
-      setShowSettingsModal(true); // Automatically show modal if any bank needs update
-    }
-  }, [banksNeedUpdate]);
+  // useEffect(() => {
+  //   if (banksNeedUpdate) {
+  //     alert('Some of your bank accounts need to be updated.');
+  //     setShowSettingsModal(true); // Automatically show modal if any bank needs update
+  //   }
+  // }, [banksNeedUpdate]);
 
   useEffect(() => {
     if (auth.user && factTree[0].label === 'Guest Bank') {
@@ -169,7 +276,7 @@ function Home() {
               );
             } else if (result.dismiss === Swal.DismissReason.cancel) {
               // User chose to upgrade their plan
-              window.open('https://billing.stripe.com/p/login/test_4gw9AB4FsdAJc80dQQ', '_blank');
+              window.open(process.env.REACT_APP_STRIPE_BILLING_LINK, '_blank');
             }
           });
         }
@@ -203,22 +310,7 @@ function Home() {
     }
 };
 
-const handleForceUpdateMode = async () => {
-  try {
-    // Assuming you have the bank name stored or selected by the user
-    const bankName = 'Bank Of America'; // Replace with the actual bank name or allow the user to select
 
-    const response = await axiosInstance.post('/plaid/force-reset-login', {
-      bankName,
-    });
-
-    console.log('Item forced into update mode:', response.data);
-    alert('Item has been forced into update mode. Try accessing your accounts again to see the update flow.');
-  } catch (error) {
-    console.error('Error forcing item into update mode:', error);
-    alert('Error forcing item into update mode. See console for details.');
-  }
-};
 
 
   
@@ -256,8 +348,7 @@ const handleForceUpdateMode = async () => {
       {/* Navigation Bar Outside the Container */}
       <Navbar bg="dark" variant="dark" expand="lg" className="w-100 mb-4">
         <Container fluid className="px-4"> {/* Adds padding on the left and right */}
-          
-          <Navbar.Brand className="text-white">Nomi Finance</Navbar.Brand>
+          {process.env.REACT_APP_ENV === 'development' && <TestControls />}
           <sup style={{ fontSize: '0.7rem', color: 'lightgreen', marginLeft: '4px' }}>[Beta]</sup>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">

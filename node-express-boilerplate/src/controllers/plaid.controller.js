@@ -5,6 +5,7 @@ const UserAccountsSummary = require('../models/userAccountSummary.model');
 const LinkToken = require('../models/linkToken.model');
 const { getBankNameByAccessToken } = require('../services/BankAccountService');
 const { sendEmail } = require('../services/email.service');
+const PlaidErrorLog  = require('../models/plaidErrorLog.model');
 const AccountCache = require('../models/accountCache.model');
 
 
@@ -467,43 +468,94 @@ const fetchAccounts = async (userId) => {
 
 
 async function handlePlaidError(plaidError, accessToken, userId, bankAccounts) {
-  if (plaidError.response && plaidError.response.data && plaidError.response.data.error_code) {
-    const errorCode = plaidError.response.data.error_code;
-    const errorMessage = plaidError.response.data.error_message;
+  if (!plaidError.response?.data?.error_code) {
+    console.error('Unexpected Plaid error format:', plaidError);
+    return;
+  }
 
-    if (['ITEM_LOGIN_REQUIRED', 'PENDING_EXPIRATION', 'PENDING_DISCONNECT'].includes(errorCode)) {
-      const bankName = await getBankNameByAccessToken(accessToken, userId);
+  const errorCode = plaidError.response.data.error_code;
+  const errorMessage = plaidError.response.data.error_message;
+  const bankName = await getBankNameByAccessToken(accessToken, userId);
 
-      // Mark the bank with `needsUpdate` status
-      bankAccounts[bankName] = [{
-        bankName: bankName,
-        needsUpdate: true,
-        error: errorMessage,
-      }];
+  try {
+    // Find existing error log or create new one
+    let errorLog = await PlaidErrorLog.findOne({
+      userId,
+      accessToken,
+      resolved: false
+    });
 
-      // Send email notification to the user
-      const user = await User.findById(userId);
-      if (user) {
-        const emailSubject = 'Important Info about your Nomi Account';
-        const emailBody = `
-          <p>Dear ${user.name},</p>
-          <p>We detected an issue with your linked bank account (${bankName}). Please update your account information to continue using Nomi Finance.</p>
-          <p>Error Code: ${errorCode}</p>
-          <p>Error Message: ${errorMessage}</p>
-          <p><a href="${process.env.FRONTEND_URL}/update-account">Click here to update your account.</a></p>
-          <p>Best regards,<br/>Nomi Finance Team</p>
-        `;
+    const now = new Date();
+    const fourHoursAgo = new Date(now - 8 * 60 * 60 * 1000);
 
-        await sendEmail(user.email, emailSubject, emailBody);
-        console.log(`Email sent to ${user.email} regarding ${errorCode}`);
+    if (errorLog) {
+      // Only send another email if the last notification was more than 4 hours ago
+      if (!errorLog.lastNotified || errorLog.lastNotified < fourHoursAgo) {
+        await sendPlaidErrorNotification(userId, bankName, errorCode, errorMessage);
+        errorLog.lastNotified = now;
+        await errorLog.save();
       }
     } else {
-      console.error(`Unhandled Plaid error: ${errorMessage}`);
+      // Create new error log and send first notification
+      errorLog = new PlaidErrorLog({
+        userId,
+        bankName,
+        accessToken,
+        errorCode,
+        errorMessage,
+        lastNotified: now
+      });
+      await errorLog.save();
+      await sendPlaidErrorNotification(userId, bankName, errorCode, errorMessage);
     }
-  } else {
-    console.error(`Error fetching accounts with access token ${accessToken}:`, plaidError);
+
+    // Update bankAccounts object with error status
+    if (bankName && bankAccounts) {
+      bankAccounts[bankName] = [{
+        bankName,
+        needsUpdate: true,
+        error: errorMessage
+      }];
+    }
+  } catch (error) {
+    console.error('Error handling Plaid error:', error);
   }
 }
+
+async function sendPlaidErrorNotification(userId, bankName, errorCode, errorMessage) {
+  const user = await User.findById(userId);
+  if (!user) return;
+
+  const emailSubject = `Action Required: Update Your ${bankName} Connection`;
+  const emailBody = `
+    <p>Dear ${user.name},</p>
+    <p>We've detected an issue with your ${bankName} account connection in Nomi Finance. To ensure your rules continue working properly, please update your credentials.</p>
+    <p><strong>Why am I receiving this?</strong><br>
+    Your bank requires periodic re-authentication to maintain secure access to your account information.</p>
+    <p><strong>What should I do?</strong><br>
+    1. Log in to Nomi Finance<br>
+    2. Click on the settings icon (⚙️) in the navigation bar<br>
+    3. Find your ${bankName} account and click "Update"</p>
+    <p><a href="${process.env.FRONTEND_URL}/home">Update Your Connection Now</a></p>
+    <p>If you need assistance, please contact our support team at sophia@nomifinance.com</p>
+    <p>Best regards,<br>The Nomi Finance Team</p>
+  `;
+
+  await sendEmail(user.email, emailSubject, emailBody);
+}
+
+exports.markErrorResolved = async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+    await PlaidErrorLog.updateMany(
+      { accessToken, resolved: false },
+      { resolved: true }
+    );
+    res.status(200).json({ message: 'Error marked as resolved' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 const getAccounts = async (req, res) => {
   console.log("gettting Accounts");

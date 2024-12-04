@@ -8,3 +8,4 @@ module.exports.UserAccountsSummary = require('./userAccountSummary.model');
 module.exports.Suggestion =require('./suggestion.model');
 module.exports.InstitutionCache = require('./institutionCache.model');
 module.exports.AccountCache = require('./accountCache.model');
+module.exports.PlaidErrorLog = require('./plaidErrorLog.model');

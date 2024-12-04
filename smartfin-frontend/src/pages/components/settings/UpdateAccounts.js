@@ -5,6 +5,7 @@ import { Button, Accordion, ListGroup, OverlayTrigger, Tooltip } from 'react-boo
 import { usePlaidLink } from 'react-plaid-link';
 import { FaSyncAlt, FaExclamationTriangle } from 'react-icons/fa';
 import { useAuth } from '../../../contexts/AuthContext';
+import {useAccounts} from '../../../contexts/AccountsContext'
 import axiosInstance from '../../../utils/axiosInstance'; // Use axios for authenticated requests
 import Swal from 'sweetalert2'; // Import SweetAlert2
 import withReactContent from 'sweetalert2-react-content';
@@ -17,13 +18,16 @@ const PlaidLinkUpdate = ({ linkToken, onSuccess, onExit }) => {
     onExit,
   };
 
+
   const { open, ready } = usePlaidLink(config);
 
   return ready ? open() : null; // Automatically open the Plaid Link when ready
 };
 
+
 const UpdateAccounts = ({ bankAccounts }) => {
   const { auth } = useAuth(); // Get the current user's info
+  const {refreshAccounts} = useAccounts();
   const [linkTokens, setLinkTokens] = useState({}); // Mapping of bankName to { linkToken, fetchedAt }
   const [currentBank, setCurrentBank] = useState(null);
   const [newAccountLinkToken, setNewAccountLinkToken] = useState(null); // For new account link token
@@ -72,16 +76,33 @@ const UpdateAccounts = ({ bankAccounts }) => {
     }
   };
 
-  const handleOnSuccess = (public_token, metadata) => {
-    console.log('Plaid Link success:', metadata);
-    // Optionally handle public_token exchange or refresh account list
-    setCurrentBank(null);
-
-    MySwal.fire({
-      icon: 'success',
-      title: 'Success',
-      text: 'Your account was successfully linked!',
-    });
+  const handleOnSuccess = async (public_token, metadata) => {
+    try {
+      if (currentBank) {
+        const bankAccount = bankAccounts[currentBank]?.[0];
+        if (bankAccount?.accessToken) {
+          await axiosInstance.post('/plaid/mark-error-resolved', {
+            accessToken: bankAccount.accessToken
+          });
+        }
+      }
+      
+      console.log('Plaid Link success:', metadata);
+      setCurrentBank(null);
+  
+      // Refresh accounts after successful update
+      if (typeof refreshAccounts === 'function') {
+        await refreshAccounts();
+      }
+  
+      MySwal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'Your account was successfully updated!',
+      });
+    } catch (error) {
+      console.error('Error marking error as resolved:', error);
+    }
   };
 
   const handleOnExit = (err, metadata) => {
@@ -187,6 +208,7 @@ const UpdateAccounts = ({ bankAccounts }) => {
           linkToken={newAccountLinkToken}
           onSuccess={handleOnSuccess}
           onExit={handleOnExit}
+          refreshAccounts={refreshAccounts}
         />
       )}
 

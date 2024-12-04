@@ -7,7 +7,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './PaymentSuccess.css';
 
 function PaymentSuccess() {
-  const { setUser, auth, setAuth } = useAuth(); 
+  const { auth, setAuth } = useAuth(); 
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(true);
   // const retriesRef = useRef(0);          // Ref to maintain retries count
@@ -16,16 +16,21 @@ function PaymentSuccess() {
 
   useEffect(() => {
     let retries = 0;
-    const maxRetries = 10; // Adjust as needed
-    const pollInterval = 3000; // Poll every 3 seconds
+    const maxRetries = 10;
+    const pollInterval = 3000;
+    let pollTimer = null;  // Add this to track the timeout
+    const abortController = new AbortController();  // Add this for cancelling requests
 
     const pollSubscriptionStatus = async () => {
       try {
-        const response = await axiosInstance.get('/users/subscription');
+        // Add signal to request
+        const response = await axiosInstance.get('/users/subscription', {
+          signal: abortController.signal
+        });
+        
         const subscriptionData = response.data;
 
         if (subscriptionData.subscriptionStatus === 'active') {
-          console.log("user found");
           setAuth((prevAuth) => ({
             ...prevAuth,
             user: {
@@ -33,22 +38,39 @@ function PaymentSuccess() {
               ...subscriptionData,
             },
           }));
-          navigate('/home'); // Redirect to home or desired page
+          navigate('/home');
         } else {
-          throw new Error('Subscription not active yet');
+          if (retries < maxRetries) {
+            retries += 1;
+            pollTimer = setTimeout(pollSubscriptionStatus, pollInterval);
+          } else {
+            setIsProcessing(false);
+            console.error('Max retries reached');
+          }
         }
       } catch (error) {
+        // Don't continue polling if we got a 401 or if the request was aborted
+        if (error.response?.status === 401 || error.name === 'AbortError') {
+          return;
+        }
+
         if (retries < maxRetries) {
           retries += 1;
-          setTimeout(pollSubscriptionStatus, pollInterval);
+          pollTimer = setTimeout(pollSubscriptionStatus, pollInterval);
         } else {
-          console.error('Max retries reached. Subscription not activated.');
-          // Handle max retries exceeded (show error message, etc.)
+          setIsProcessing(false);
+          console.error('Max retries reached');
         }
       }
     };
 
     pollSubscriptionStatus();
+
+    // Cleanup function
+    return () => {
+      if (pollTimer) clearTimeout(pollTimer);
+      abortController.abort();  // Cancel any in-flight requests
+    };
   }, [setAuth, navigate]); // Remove setUser from dependencies
 
   const handleGoHome = () => {
