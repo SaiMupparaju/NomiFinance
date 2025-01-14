@@ -77,7 +77,7 @@ const getGuestFactTree = () => {
               label: 'Expenses',
               value: 'expenses',
               children: [
-                { label: 'Last Rule Check', value: 'last_rule_check' },
+                { label: 'In Last Day', value: 'in_last_day' },
                 { label: 'Since 1 Week', value: 'since_1_week' },
                 { label: 'Since 1 Month', value: 'since_1_month' },
                 { label: 'Since 1 Year', value: 'since_1_year' },

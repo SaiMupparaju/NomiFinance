@@ -1,90 +1,58 @@
 /* Home.css */
 
 .home-container {
-    padding: 20px;
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  
-  .rule-cards {
+  padding: 20px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.empty-state-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.empty-state-emoji {
+  font-size: 4rem;
+  margin-bottom: 10px;
+}
+
+.empty-state-title {
+  font-weight: 600;
+  font-size: 1.8rem;
+  color: #333;
+}
+
+.or-text {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin: 20px 0;
+}
+
+.custom-rule-btn {
+  font-size: 1.1rem;
+  padding: 0.75rem 1rem;
+}
+
+.premade-rule-btn {
+  font-size: 1.1rem;
+  padding: 0.75rem 1rem;
+}
+
+.rule-cards {
   width: 100%;
   display: flex;
   flex-wrap: wrap;
-  justify-content: center; /* Centers the rule cards */
+  justify-content: center;
 }
 
 .rule-card {
   margin: 20px;
   flex-grow: 1;
-  /* Default card size for small layout */
   max-width: 350px;
   width: 100%;
 }
 
-/* Small layout */
-.rule-cards.small .rule-card {
-  max-width: 350px; /* Max width for small cards */
-}
+/* Adjust your different layout classes (small, medium, large) as needed... */
 
-/* Medium layout */
-.rule-cards.medium .rule-card {
-  max-width: 600px; /* Max width for medium cards */
-}
-
-/* Large layout */
-.rule-cards.large .rule-card {
-  max-width: 1000px; /* Max width for large cards */
-  width: 100%; /* Ensure full width for large layout */
-}
-
-.welcome-message {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #000;
-}
-  
-  .navbar {
-    margin-bottom: 20px;
-    width: 100%;
-  }
-  
-  .navbar-brand {
-    font-size: 1.5rem;
-  }
-  
-  .navbar-nav .nav-link {
-    display: flex;
-    align-items: center;
-    font-size: 1.2rem;
-  }
-  
-  .navbar-nav .nav-link svg {
-    margin-right: 5px;
-  }
-
-  .help-text {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    font-size: 0.9rem;
-    color: #555; /* Adjust color for readability */
-    z-index: 1000; /* Ensure it stays on top */
-  }
-  
-  .btn {
-    display: flex;
-    align-items: center;
-  }
-  
-  .btn svg {
-    margin-right: 5px;
-  }
-  
-  .rule-cards {
-    width: 100%;
-  }
-  

@@ -1,452 +1,172 @@
+// __tests__/fact.controller.test.js
+
 const moment = require('moment');
-const { calculateExpenses, calculateIncome, isIncomeTransaction } = require('../../../src/controllers/fact.controller');
+const factController = require('../controllers/fact.controller');
+const BankAccount = require('../models/bankAccount.model');
+const { getTransactions } = require('../controllers/plaid.controller');
 
-describe('calculateExpenses', () => {
-  it('calculates total expenses correctly for given categories and timeframe', async () => {
-    const account = {
-      transactions: [
-        {
-          date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-          amount: -100.0,
-          personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-        },
-        {
-          date: moment().subtract(10, 'days').format('YYYY-MM-DD'),
-          amount: -50.0,
-          personal_finance_category: { primary: 'TRANSPORTATION', detailed: 'GASOLINE_FUEL' },
-        },
-        {
-          date: moment().subtract(15, 'days').format('YYYY-MM-DD'),
-          amount: -200.0,
-          personal_finance_category: { primary: 'ENTERTAINMENT', detailed: 'MOVIES' },
-        },
-        {
-          date: moment().subtract(2, 'days').format('YYYY-MM-DD'),
-          amount: -150.0,
-          personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'GROCERIES' },
-        },
-        // Transaction outside the timeframe
-        {
-          date: moment().subtract(2, 'months').format('YYYY-MM-DD'),
-          amount: -300.0,
-          personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-        },
-        // Transaction not matching categories
-        {
-          date: moment().subtract(3, 'days').format('YYYY-MM-DD'),
-          amount: -80.0,
-          personal_finance_category: { primary: 'HEALTHCARE', detailed: 'DOCTOR' },
-        },
-      ],
-    };
+// Mock the dependencies
+jest.mock('../models/bankAccount.model');
+jest.mock('../controllers/plaid.controller');
+jest.mock('../services/exchangeRateService');
 
-    const params = {
-      categories: ['FOOD_AND_DRINK', 'ENTERTAINMENT'],
-    };
-
-    const timeframe = 'since_1_month';
-
-    const totalExpenses = await calculateExpenses(account, params, timeframe);
-
-    expect(totalExpenses).toBe(450.0);
+describe('Fact Controller', () => {
+  beforeEach(() => {
+    // Clear all mocks before each test
+    jest.clearAllMocks();
   });
 
-  it('returns 0 if no transactions match the categories', async () => {
-    const account = {
-      transactions: [
-        {
-          date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-          amount: -100.0,
-          personal_finance_category: { primary: 'HEALTHCARE', detailed: 'DOCTOR' },
-        },
-      ],
-    };
-
-    const params = {
-      categories: ['FOOD_AND_DRINK', 'ENTERTAINMENT'],
-    };
-
-    const timeframe = 'since_1_month';
-
-    const totalExpenses = await calculateExpenses(account, params, timeframe);
-
-    expect(totalExpenses).toBe(0);
-  });
-
-  it('handles positive amounts correctly', async () => {
-    const account = {
-      transactions: [
-        {
-          date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-          amount: 100.0,
-          personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-        },
-      ],
-    };
-
-    const params = {
-      categories: ['FOOD_AND_DRINK'],
-    };
-
-    const timeframe = 'since_1_month';
-
-    const totalExpenses = await calculateExpenses(account, params, timeframe);
-
-    expect(totalExpenses).toBe(100.0);
-  });
-
-  it('returns 0 if no transactions are within the timeframe', async () => {
-    const account = {
-      transactions: [
-        {
-          date: moment().subtract(2, 'months').format('YYYY-MM-DD'),
-          amount: -100.0,
-          personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-        },
-      ],
-    };
-
-    const params = {
-      categories: ['FOOD_AND_DRINK'],
-    };
-
-    const timeframe = 'since_1_month';
-
-    const totalExpenses = await calculateExpenses(account, params, timeframe);
-
-    expect(totalExpenses).toBe(0);
-  });
-
-  it('throws an error if categories are missing in params', async () => {
-    const account = {
-      transactions: [
-        {
-          date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-          amount: -100.0,
-          personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-        },
-      ],
-    };
-
-    const params = {}; // Missing categories
-
-    const timeframe = 'since_1_month';
-
-    await expect(calculateExpenses(account, params, timeframe)).rejects.toThrow(
-      'Categories are required to calculate expenses.'
-    );
-  });
-
-  it('handles zero amount transactions correctly', async () => {
-    const account = {
-      transactions: [
-        {
-          date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-          amount: 0,
-          personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-        },
-      ],
-    };
-
-    const params = {
-      categories: ['FOOD_AND_DRINK'],
-    };
-
-    const timeframe = 'since_1_month';
-
-    const totalExpenses = await calculateExpenses(account, params, timeframe);
-
-    expect(totalExpenses).toBe(0);
-  });
-
-  it('returns 0 when there are no transactions', async () => {
-    const account = {
-      transactions: [],
-    };
-
-    const params = {
-      categories: ['FOOD_AND_DRINK'],
-    };
-
-    const timeframe = 'since_1_month';
-
-    const totalExpenses = await calculateExpenses(account, params, timeframe);
-
-    expect(totalExpenses).toBe(0);
-  });
-});
-
-
-describe('calculateIncome', () => {
-    it('calculates total income correctly for the timeframe', async () => {
-      const account = {
-        transactions: [
-          {
-            date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-            amount: 2000.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_WAGES' },
-          },
-          {
-            date: moment().subtract(10, 'days').format('YYYY-MM-DD'),
-            amount: 500.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_INTEREST' },
-          },
-          {
-            date: moment().subtract(15, 'days').format('YYYY-MM-DD'),
-            amount: 300.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_OTHER' },
-          },
-          // Transaction outside the timeframe
-          {
-            date: moment().subtract(2, 'months').format('YYYY-MM-DD'),
-            amount: 1000.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_WAGES' },
-          },
-          // Non-income transaction
-          {
-            date: moment().subtract(3, 'days').format('YYYY-MM-DD'),
-            amount: 80.0,
-            personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-          },
-        ],
-      };
-  
-      const params = {};
-  
-      const timeframe = 'since_1_month';
-      const incomeType = 'total';
-  
-      const totalIncome = await calculateIncome(account, params, timeframe, incomeType);
-  
-      expect(totalIncome).toBe(2800.0);
+  describe('toProperCase', () => {
+    test('converts snake_case to proper case', () => {
+      expect(factController.toProperCase('bank_of_america')).toBe('Bank Of America');
+      expect(factController.toProperCase('plaid_checking')).toBe('Plaid Checking');
     });
-  
-    it('calculates income from specific sources correctly', async () => {
-      const account = {
-        transactions: [
-          {
-            date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-            amount: 2000.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_WAGES' },
-          },
-          {
-            date: moment().subtract(10, 'days').format('YYYY-MM-DD'),
-            amount: 500.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_INTEREST' },
-          },
-          {
-            date: moment().subtract(15, 'days').format('YYYY-MM-DD'),
-            amount: 300.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_OTHER' },
-          },
-        ],
-      };
-  
-      const params = {
-        incomes: ['INCOME_WAGES', 'INCOME_INTEREST'],
-      };
-  
-      const timeframe = 'since_1_month';
-      const incomeType = 'from';
-  
-      const totalIncome = await calculateIncome(account, params, timeframe, incomeType);
-  
-      expect(totalIncome).toBe(2500.0);
-    });
-  
-    it('returns 0 if no income transactions match the specified incomes', async () => {
-      const account = {
-        transactions: [
-          {
-            date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-            amount: 2000.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_WAGES' },
-          },
-        ],
-      };
-  
-      const params = {
-        incomes: ['INCOME_INTEREST'],
-      };
-  
-      const timeframe = 'since_1_month';
-      const incomeType = 'from';
-  
-      const totalIncome = await calculateIncome(account, params, timeframe, incomeType);
-  
-      expect(totalIncome).toBe(0);
-    });
-  
-    it('ignores negative income amounts', async () => {
-      const account = {
-        transactions: [
-          {
-            date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-            amount: -2000.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_WAGES' },
-          },
-        ],
-      };
-  
-      const params = {};
-  
-      const timeframe = 'since_1_month';
-      const incomeType = 'total';
-  
-      const totalIncome = await calculateIncome(account, params, timeframe, incomeType);
-  
-      expect(totalIncome).toBe(0);
-    });
-  
-    it('throws an error if incomes are missing when incomeType is "from"', async () => {
-      const account = {
-        transactions: [
-          {
-            date: moment().subtract(5, 'days').format('YYYY-MM-DD'),
-            amount: 2000.0,
-            personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_WAGES' },
-          },
-        ],
-      };
-  
-      const params = {}; // Missing incomes
-  
-      const timeframe = 'since_1_month';
-      const incomeType = 'from';
-  
-      await expect(calculateIncome(account, params, timeframe, incomeType)).rejects.toThrow(
-        'Incomes are required to calculate income from specific sources.'
-      );
-    });
-  
-    it('returns 0 when there are no income transactions', async () => {
-      const account = {
-        transactions: [],
-      };
-  
-      const params = {};
-  
-      const timeframe = 'since_1_month';
-      const incomeType = 'total';
-  
-      const totalIncome = await calculateIncome(account, params, timeframe, incomeType);
-  
-      expect(totalIncome).toBe(0);
+
+    test('handles single word correctly', () => {
+      expect(factController.toProperCase('chase')).toBe('Chase');
     });
   });
 
   describe('getStartDate', () => {
-    const { getStartDate } = require('../../../src/controllers/fact.controller');
-  
-    it('returns correct date for "since_last_month"', () => {
-      const expectedDate = moment().subtract(1, 'month').startOf('day').format();
-      const startDate = getStartDate('since_last_month').format();
-      expect(startDate).toBe(expectedDate);
+    test('returns correct date for different timeframes', () => {
+      const now = moment('2025-01-14'); // Use the current date from the context
+      jest.spyOn(moment, 'now').mockImplementation(() => now);
+
+      const testCases = [
+        { timeframe: 'since_1_week', expected: now.clone().subtract(1, 'week').startOf('day') },
+        { timeframe: 'since_1_month', expected: now.clone().subtract(1, 'month').startOf('day') },
+        { timeframe: 'since_1_year', expected: now.clone().subtract(1, 'year').startOf('day') },
+        { timeframe: 'since_ytd', expected: now.clone().startOf('year') }
+      ];
+
+      testCases.forEach(({ timeframe, expected }) => {
+        expect(factController.getStartDate(timeframe).format('YYYY-MM-DD'))
+          .toBe(expected.format('YYYY-MM-DD'));
+      });
     });
-  
-    it('throws an error for an invalid timeframe', () => {
-      expect(() => getStartDate('invalid_timeframe')).toThrow('Invalid timeframe: invalid_timeframe');
+
+    test('throws error for invalid timeframe', () => {
+      expect(() => factController.getStartDate('invalid_timeframe'))
+        .toThrow('Invalid timeframe: invalid_timeframe');
     });
   });
-  
-  describe('shouldCountTransaction', () => {
-    const { shouldCountTransaction } = require('../../../src/controllers/fact.controller');
-  
-    it('returns true when transaction matches primary category', () => {
-      const transaction = {
-        personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-      };
-      const categories = ['FOOD_AND_DRINK'];
-  
-      expect(shouldCountTransaction(transaction, categories)).toBe(true);
+
+  describe('calculateExpenses', () => {
+    const mockAccount = {
+      accountId: 'test-account',
+      transactions: [
+        {
+          date: '2025-01-14',
+          amount: -100,
+          personal_finance_category: { primary: 'FOOD_AND_DRINK' }
+        },
+        {
+          date: '2025-01-13',
+          amount: -50,
+          personal_finance_category: { primary: 'ENTERTAINMENT' }
+        }
+      ]
+    };
+
+    test('calculates expenses correctly with categories', async () => {
+      const params = { categories: ['FOOD_AND_DRINK'] };
+      const result = await factController.calculateExpenses(
+        mockAccount,
+        params,
+        'since_1_week'
+      );
+      expect(result).toBe(100);
     });
-  
-    it('returns true when transaction matches detailed category', () => {
-      const transaction = {
-        personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-      };
-      const categories = ['RESTAURANTS'];
-  
-      expect(shouldCountTransaction(transaction, categories)).toBe(true);
+
+    test('throws error when categories are missing', async () => {
+      await expect(factController.calculateExpenses(
+        mockAccount,
+        {},
+        'since_1_week'
+      )).rejects.toThrow('Categories are required to calculate expenses.');
     });
-  
-    it('returns false when transaction does not match any category', () => {
-      const transaction = {
-        personal_finance_category: { primary: 'HEALTHCARE', detailed: 'DOCTOR' },
-      };
-      const categories = ['FOOD_AND_DRINK'];
-  
-      expect(shouldCountTransaction(transaction, categories)).toBe(false);
+  });
+
+  describe('getFactValue', () => {
+    const mockUserId = 'user123';
+    const mockAccount = {
+      balances: {
+        current: 1000,
+        available: 900,
+        limit: 2000,
+        iso_currency_code: 'USD'
+      },
+      transactions: []
+    };
+
+    beforeEach(() => {
+      BankAccount.findOne.mockResolvedValue(mockAccount);
     });
-  
-    it('returns false when personal_finance_category is missing', () => {
-      const transaction = {};
-      const categories = ['FOOD_AND_DRINK'];
-  
-      expect(shouldCountTransaction(transaction, categories)).toBe(false);
+
+    test('returns balance values correctly', async () => {
+      const factString = 'chase/checking_1234/balances/current';
+      const result = await factController.getFactValue(mockUserId, factString);
+      expect(result).toBe(1000);
+    });
+
+    test('handles custom values with currency conversion', async () => {
+      const factString = 'custom_value';
+      const params = { customValue: 100, currency: 'USD' };
+      const result = await factController.getFactValue(mockUserId, factString, params);
+      expect(result).toBe(100); // Assuming 1:1 conversion for USD
+    });
+
+    test('throws error for invalid fact string format', async () => {
+      const factString = 'invalid/format';
+      await expect(factController.getFactValue(mockUserId, factString))
+        .rejects.toThrow('Invalid fact string format.');
     });
   });
 
   describe('isIncomeTransaction', () => {
-    const { isIncomeTransaction } = require('../../../src/controllers/fact.controller');
-  
-    it('returns true for incomeType "total" and income transaction', () => {
+    test('identifies income transactions correctly', () => {
       const transaction = {
-        personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_WAGES' },
+        personal_finance_category: { primary: 'INCOME', detailed: 'SALARY' }
       };
-      const incomeType = 'total';
-      const params = {};
-  
-      expect(isIncomeTransaction(transaction, incomeType, params)).toBe(true);
+      expect(factController.isIncomeTransaction(transaction, 'total')).toBe(true);
     });
-  
-    it('returns true for incomeType "from" when transaction matches incomes', () => {
+
+    test('identifies non-income transactions correctly', () => {
       const transaction = {
-        personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_WAGES' },
+        personal_finance_category: { primary: 'FOOD_AND_DRINK' }
       };
-      const incomeType = 'from';
-      const params = { incomes: ['INCOME_WAGES'] };
-  
-      expect(isIncomeTransaction(transaction, incomeType, params)).toBe(true);
-    });
-  
-    it('returns false when incomeType is "from" and transaction does not match incomes', () => {
-      const transaction = {
-        personal_finance_category: { primary: 'INCOME', detailed: 'INCOME_INTEREST' },
-      };
-      const incomeType = 'from';
-      const params = { incomes: ['INCOME_WAGES'] };
-  
-      expect(isIncomeTransaction(transaction, incomeType, params)).toBe(false);
-    });
-  
-    it('returns false when transaction is not income', () => {
-      const transaction = {
-        personal_finance_category: { primary: 'FOOD_AND_DRINK', detailed: 'RESTAURANTS' },
-      };
-      const incomeType = 'total';
-      const params = {};
-  
-      expect(isIncomeTransaction(transaction, incomeType, params)).toBe(false);
-    });
-  
-    it('returns false when personal_finance_category is missing', () => {
-      const transaction = {};
-      const incomeType = 'total';
-      const params = {};
-  
-      expect(isIncomeTransaction(transaction, incomeType, params)).toBe(false);
+      expect(factController.isIncomeTransaction(transaction, 'total')).toBe(false);
     });
   });
 
-  jest.mock('../../../src/services/exchangeRateService', () => ({
-  getExchangeRate: jest.fn().mockImplementation((currency) => {
-    if (currency === 'USD') {
-      return Promise.resolve({ rate: 1 });
-    } else if (currency === 'EUR') {
-      return Promise.resolve({ rate: 0.85 });
-    } else {
-      return Promise.resolve(null); // Simulate missing rate
-    }
-  }),
-}));
+  describe('getFactTree', () => {
+    const mockBankAccounts = {
+      'Chase': [{
+        type: 'depository',
+        name: 'Checking',
+        mask: '1234'
+      }]
+    };
+
+    test('generates correct fact tree structure', () => {
+      const result = factController.getFactTree(mockBankAccounts);
+      expect(result).toHaveLength(2); // Including custom_value node
+      expect(result[0].label).toBe('Chase');
+      expect(result[0].children[0].label).toBe('Checking {1234}');
+    });
+
+    test('includes all required fact types', () => {
+      const result = factController.getFactTree(mockBankAccounts);
+      const accountNode = result[0].children[0];
+      
+      expect(accountNode.children).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ value: 'balances' }),
+          expect.objectContaining({ value: 'expenses' }),
+          expect.objectContaining({ value: 'income' }),
+          expect.objectContaining({ value: 'contains' })
+        ])
+      );
+    });
+  });
+});

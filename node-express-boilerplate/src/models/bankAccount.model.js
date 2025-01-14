@@ -20,6 +20,10 @@ const BankAccountSchema = new mongoose.Schema({
   lastTransactionFetch: { type: Date, default: null },
   lastUpdated: { type: Date, default: Date.now },
   accountsCacheTimestamp: { type: Date, default: null },
+  transactionsSyncCursor: {
+    type: String,
+    default: null
+  },
   accountsCacheData: mongoose.Schema.Types.Mixed, // Stores accounts data
 }, { timestamps: true });
 

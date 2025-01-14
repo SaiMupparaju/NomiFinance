@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect,  } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFact } from '../contexts/FactContext'; 
 import { useNavigate } from 'react-router-dom';
@@ -6,10 +6,11 @@ import { useAccounts } from '../contexts/AccountsContext'; // Use the new Accoun
 import { getUserRules } from '../utils/rule_api'; 
 import RuleCard from './components/RuleCard';
 import SettingsModal from './components/SettingsModal';
-import { Navbar, Nav, NavDropdown, Button, Container, Row, Col } from 'react-bootstrap';
-import { FaCog, FaThLarge, FaTh, FaBars, FaSignOutAlt, FaPlus } from 'react-icons/fa';
-import { loadStripe } from '@stripe/stripe-js';
+import { Button, Container, Row, Col, Nav } from 'react-bootstrap';
 import Swal from "sweetalert2";
+import MyNavbar from './components/MyNavbar';
+import Applet from './components/Applet';
+import { appletConfigs, processAppletConfig } from './components/AppletConfigs';
 import axiosInstance from '../utils/axiosInstance';
 import './styles/Home.css';
 
@@ -28,11 +29,18 @@ function Home() {
 
   const [subscriptionLimit, setSubscriptionLimit] = useState(0);
   const [activeRulesCount, setActiveRulesCount] = useState(0);
+  const [activeTab, setActiveTab] = useState('applets');
 
   const hasBankAccounts = 
   (bankAccounts && Object.values(bankAccounts).some(accountsArray => Array.isArray(accountsArray) && accountsArray.length > 0)) ||
   (factTree && !factTree.some(node => node.label === "Guest Bank"));
 
+
+  const handleAppletSelect = (config) => {
+    navigate('/applet-form', { 
+      state: { appletId: config.id }  // pass the config’s ID
+    });
+  };
 
   useEffect(() => {
     if (auth.user) {
@@ -43,10 +51,8 @@ function Home() {
         limit = Infinity; // Premium has no limit
       } else if (subscriptionProductId === process.env.REACT_APP_NOMI_STANDARD) {
         limit = 4; // Standard subscription limit
-      } else if (subscriptionProductId === process.env.REACT_APP_NOMI_SINGLE) {
-        limit = 1; // Single subscription limit
       } else {
-        limit = 0; // No subscription
+        limit = 1; // No subscription
       }
 
       setSubscriptionLimit(limit);
@@ -74,6 +80,8 @@ function Home() {
 
     getRules();
   }, [auth]);
+
+
 
   useEffect(() => {
     if (auth.user && bankAccounts) {
@@ -239,7 +247,7 @@ function Home() {
           limit = Infinity; // Premium has no limit
         } else if (subscriptionProductId === process.env.REACT_APP_NOMI_STANDARD) {
           limit = 4; // Standard subscription limit
-        } else if (subscriptionProductId === process.env.REACT_APP_NOMI_SINGLE) {
+        } else {
           limit = 1; // Single subscription limit
         }
 
@@ -343,103 +351,119 @@ function Home() {
     setRules(prevRules => prevRules.filter(rule => rule._id !== ruleId));
   };
 
+  const goToAppletsTab = () => {
+    setActiveTab('applets');
+  };
+
   return (
     <>
-      {/* Navigation Bar Outside the Container */}
-      <Navbar bg="dark" variant="dark" expand="lg" className="w-100 mb-4">
-        <Container fluid className="px-4"> {/* Adds padding on the left and right */}
-          {process.env.REACT_APP_ENV === 'development' && <TestControls />}
-          <sup style={{ fontSize: '0.7rem', color: 'lightgreen', marginLeft: '4px' }}>[Beta]</sup>
-          <Navbar.Toggle aria-controls="basic-navbar-nav" />
-          <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="ms-auto align-items-center">
-                {!hasBankAccounts && (
-                  <Button onClick={() => navigate('/connect-banks')} classname="me-2" variant="primary">
-                    <FaPlus /> Connect Accounts
-                  </Button>
-                )}
-                {hasBankAccounts && (
-                  <Button variant="primary" onClick={handleCreateRule} className="me-2">
-                  <FaPlus /> Create Rule
-                  </Button>
-                )}
+      <MyNavbar
+        hasBankAccounts={hasBankAccounts}
+        handleCreateRule={handleCreateRule}
+        handleLayoutChange={handleLayoutChange}
+        setShowSettingsModal={setShowSettingsModal}
+        authUser={auth.user}
+        handleLogout={logout}
+        subscriptionStatus={auth.user?.subscriptionStatus}
+      />
 
-          
-              {/* <Button variant="primary" onClick={handleGetIncome}>
-              Call Income API
-              </Button> */}
-
-              {/* Layout Selector Dropdown */}
-              <NavDropdown align="end" title={<FaThLarge />} id="layout-dropdown">
-                <NavDropdown.Item onClick={() => handleLayoutChange('small')}>
-                  <FaTh /> Small Layout
-                </NavDropdown.Item>
-                <NavDropdown.Item onClick={() => handleLayoutChange('medium')}>
-                  <FaThLarge /> Medium Layout
-                </NavDropdown.Item>
-                <NavDropdown.Item onClick={() => handleLayoutChange('large')}>
-                  <FaBars /> Large Layout
-                </NavDropdown.Item>
-              </NavDropdown>
-
-              {/* Settings Icon */}
-              <Nav.Link onClick={() => setShowSettingsModal(true)}>
-                <FaCog className="text-white" />
-              </Nav.Link>
-
-              {auth.user && auth.user.subscriptionStatus !== 'active' && (
-                <Button variant="success" onClick={handlePayment} className="me-2">
-                  Subscribe Now
-                 </Button>
-              )}
-
-              {/* Conditionally render Logout or Sign Up button */}
-              {!auth.user ? (
-                <Button variant="success" onClick={() => navigate('/register')} className="ms-2">
-                  Sign Up
-                </Button>
-              ) : (
-                <Button variant="danger" onClick={handleLogout} className="ms-2">
-                  <FaSignOutAlt /> Logout
-                </Button>
-              )}
-            </Nav>
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
-
-      {/* Main Content */}
       <div className="home-container">
-      <Row>
-        <Col className="text-start mb-2">
-          <small className="text-muted">
-            Need help? Contact us at{' '}
-            <a href="mailto:sophia@nomifinance.com" className="text-muted">sophia@nomifinance.com</a>
-          </small>
-        </Col>
-      </Row>
+
+        {/* TABS for "My Rules" vs "Applets" */}
+        <Nav 
+          variant="tabs" 
+          activeKey={activeTab} 
+          onSelect={(selectedKey) => setActiveTab(selectedKey)}
+          className="mb-3"
+        >
+          <Nav.Item>
+            <Nav.Link eventKey="rules">My Rules</Nav.Link>
+          </Nav.Item>
+          <Nav.Item>
+            <Nav.Link eventKey="applets">Premade Rules</Nav.Link>
+          </Nav.Item>
+        </Nav>
+
         <Container fluid>
-          {rules.length === 0 ? (
-            <div className="text-center my-5">
-              <h1 style={{ fontSize: '4rem' }}>😕</h1>
-              <h3 className="mb-4">So empty... Why not create a new rule?</h3>
-              <Button onClick={handleCreateRule} size="lg" variant="primary">
-                Create a Rule
-              </Button>
-            </div>
-          ) : (
-            <Row className="justify-content-center">
-              {rules.map((rule, index) => {
-                const colSize = getColSize(layoutOption);
+          {/** If "rules" tab is selected, show user’s existing rules */}
+          {activeTab === 'rules' && (
+            <>
+              {rules.length === 0 ? (
+                <div className="text-center my-5">
+                  <h1 style={{ fontSize: '4rem' }}>😕</h1>
+                  <h3 className="mb-4">So empty... Why not</h3>
+
+                  <Row className="justify-content-center">
+                    <Col md={6} lg={4} className="mb-4">
+                      <Button 
+                        onClick={handleCreateRule} 
+                        size="lg" 
+                        variant="primary" 
+                        className="w-100"
+                      >
+                        Create Custom Rule?
+                      </Button>
+                    </Col>
+                  </Row>
+
+                      {/* "Or" text */}
+                    <p style={{ fontSize: '1.2rem', margin: '20px 0' }}>Or</p>
+
+                    {/* Second button */}
+                    <Row className="justify-content-center">
+                      <Col md={6} lg={4}>
+                        <Button
+                          onClick={goToAppletsTab}
+                          size="lg"
+                          variant="primary"
+                          className="w-100"
+                        >
+                          Check Out Our Premade Rules
+                        </Button>
+                      </Col>
+                    </Row>
+                </div>
+              ) : (
+                <Row className="justify-content-center">
+                  {rules.map((rule, index) => {
+                    const colSize = getColSize(layoutOption);
+                    return (
+                      <Col 
+                        key={rule._id || index} 
+                        {...colSize} 
+                        className="mb-4 d-flex"
+                      >
+                        <RuleCard
+                          rule={rule}
+                          onToggle={handleToggleRule}
+                          activeRulesCount={activeRulesCount}
+                          subscriptionLimit={subscriptionLimit}
+                          onDelete={handleDeleteRule}
+                        />
+                      </Col>
+                    );
+                  })}
+                </Row>
+              )}
+            </>
+          )}
+
+          {/** If "applets" tab is selected, show all applet configs */}
+          {activeTab === 'applets' && (
+            <Row className="mt-3">
+              {Object.keys(appletConfigs).map((key) => {
+                const config = appletConfigs[key];
                 return (
-                  <Col key={index} {...colSize} className="mb-4 d-flex">
-                    <RuleCard 
-                    key={rule._id || index} 
-                    rule={rule} 
-                    onToggle={handleToggleRule} 
-                    activeRulesCount={activeRulesCount} 
-                    subscriptionLimit={subscriptionLimit} 
-                    onDelete={handleDeleteRule}/>
+                  <Col 
+                    md={6} 
+                    lg={4} 
+                    className="mb-4 d-flex justify-content-center" 
+                    key={key}
+                  >
+                    <Applet 
+                      config={config} 
+                      onSelect={handleAppletSelect}
+                    />
                   </Col>
                 );
               })}
@@ -447,13 +471,14 @@ function Home() {
           )}
         </Container>
 
-        <SettingsModal 
+        {/* Settings Modal for bank updates */}
+        <SettingsModal
           bankAccounts={bankAccounts}
-          show={showSettingsModal} 
-          handleClose={() => setShowSettingsModal(false)} 
-          refreshAccounts={refreshAccounts}  
-          loading={loading}                
-          error={error}                     
+          show={showSettingsModal}
+          handleClose={() => setShowSettingsModal(false)}
+          refreshAccounts={refreshAccounts}
+          loading={loading}
+          error={error}
         />
       </div>
     </>

@@ -23,7 +23,7 @@ class EmailService {
           text: text,
           html :  `<p>${text}</p>` 
         };
-        await transport.sendMail(msg);
+        await this.transporter.sendMail(msg);
       };
   }
   

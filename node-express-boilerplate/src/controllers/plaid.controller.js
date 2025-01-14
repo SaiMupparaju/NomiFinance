@@ -330,10 +330,9 @@ const saveOrUpdateAccount = async (accountData) => {
 };
 
 //build out a cache here
-const fetchAccounts = async (userId) => {
+async function fetchAccounts(userId) {
   try {
     const user = await User.findById(userId);
-
     if (!user) {
       throw new Error(`User with ID ${userId} not found.`);
     }
@@ -346,20 +345,20 @@ const fetchAccounts = async (userId) => {
 
     for (const accessToken of user.plaidAccessTokens) {
       try {
-        
+        // Possibly do account-level caching, if you want
         let accountCache = await AccountCache.findOne({ accessToken });
         const now = new Date();
-        const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000); // 10 minutes ago
+        const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
         let accountsResponseData;
         if (accountCache && accountCache.cacheTimestamp > tenMinutesAgo) {
-          // **Use Cached Data**
-          accountsResponseData = accountCache.accountsData;
           console.log(`Using cached accounts data for access token ${accessToken}`);
-        }else{
+          accountsResponseData = accountCache.accountsData;
+        } else {
           const accountsResponse = await plaidClient.accountsGet({ access_token: accessToken });
           accountsResponseData = accountsResponse.data;
-          // **Add or update to model**
+
+          // update or create accountCache
           if (accountCache) {
             accountCache.accountsData = accountsResponseData;
             accountCache.cacheTimestamp = now;
@@ -370,81 +369,66 @@ const fetchAccounts = async (userId) => {
               cacheTimestamp: now,
             });
           }
-
           await accountCache.save();
         }
 
+        // accountsResponseData contains { accounts, item }
+        const { accounts, item } = accountsResponseData;
 
-        // Fetch accounts from Plaid
-        const accounts = accountsResponseData.accounts;
-        const item = accountsResponseData.item;
-
-        // Get bank name from Plaid
+        // get bank name from institutionsGetById
         const institutionResponse = await plaidClient.institutionsGetById({
           institution_id: item.institution_id,
-          country_codes: ['US', 'CA'],
+          country_codes: ['US','CA'],
         });
         const bankName = institutionResponse.data.institution.name;
 
-        for (const account of accounts) {
-          // Find or create the BankAccount in your database
-          let bankAccount = await BankAccount.findOne({ accountId: account.account_id, userId });
+        // loop each account from Plaid
+        for (const acct of accounts) {
+          // find or create BankAccount in DB
+          let bankAccount = await BankAccount.findOne({
+            accountId: acct.account_id,
+            userId,
+          });
           if (!bankAccount) {
-            // If account doesn't exist in DB, create it
             bankAccount = new BankAccount({
-              accountId: account.account_id,
-              userId: userId,
-              bankName: bankName,
-              accountName: account.name,
-              mask: account.mask,
-              subtype: account.subtype,
-              type: account.type,
-              balances: account.balances,
-              accessToken: accessToken,
+              accountId: acct.account_id,
+              userId,
+              bankName,
+              accountName: acct.name,
+              mask: acct.mask,
+              subtype: acct.subtype,
+              type: acct.type,
+              balances: acct.balances,
+              accessToken,
               userToken: user.plaidUserToken,
               transactions: [],
               lastTransactionFetch: null,
+              transactionsSyncCursor: null, // new
             });
           } else {
-            // Update account details if necessary
-            bankAccount.balances = account.balances;
-            bankAccount.mask = account.mask;
-            bankAccount.subtype = account.subtype;
-            bankAccount.type = account.type;
+            // update fields if changed
+            bankAccount.balances = acct.balances;
+            bankAccount.mask = acct.mask;
+            bankAccount.subtype = acct.subtype;
+            bankAccount.type = acct.type;
           }
 
-          // Check if we need to fetch transactions
-          const now = new Date();
-          const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+          // decide if we want to do an initial or forced sync
+          const fourHoursAgo = new Date(now.getTime() - 4*60*60*1000);
           if (!bankAccount.lastTransactionFetch || bankAccount.lastTransactionFetch < fourHoursAgo) {
-            console.log(`Fetching transactions for account ${account.account_id}`);
-
-            // Fetch transactions from Plaid
-            const startDate = '2023-01-01'; // Adjust as needed
-            const endDate = now.toISOString().split('T')[0];
-            const transactionsResponse = await plaidClient.transactionsGet({
-              access_token: accessToken,
-              start_date: startDate,
-              end_date: endDate,
-              options: { account_ids: [account.account_id] },
-            });
-
-            const transactions = transactionsResponse.data.transactions;
-
-            // Update transactions and timestamp
-            bankAccount.transactions = transactions;
-            bankAccount.lastTransactionFetch = now;
+            console.log(`Syncing transactions for bankAccount ${bankAccount.accountId}...`);
+            await syncTransactions(bankAccount);
           } else {
-            console.log(`Using cached transactions for account ${account.account_id}`);
+            console.log(`Using cached transactions for bankAccount ${bankAccount.accountId}`);
           }
 
           // Save the bank account
           await bankAccount.save();
 
-          // Prepare data for response
+          // Prepare data for final return
           const accountData = {
-            ...account,
-            bankName: bankName,
+            ...acct,
+            bankName,
             transactions: bankAccount.transactions,
           };
 
@@ -453,18 +437,21 @@ const fetchAccounts = async (userId) => {
           }
           bankAccounts[bankName].push(accountData);
         }
+
       } catch (plaidError) {
-        // Handle Plaid-specific errors
+        // handle plaid error
         await handlePlaidError(plaidError, accessToken, userId, bankAccounts);
       }
     }
 
     return bankAccounts;
+
   } catch (error) {
     console.error(`Error fetching accounts for user ID ${userId}:`, error);
     throw new Error('Failed to fetch accounts');
   }
-};
+}
+
 
 
 async function handlePlaidError(plaidError, accessToken, userId, bankAccounts) {
@@ -613,61 +600,96 @@ const handlePlaidWebhook = async (req, res) => {
   }
 };
 
-
-const getTransactions = async (userId, bankName, accountName) => {
-  try {
-    // Fetch the BankAccount document
-    const account = await BankAccount.findOne({
-      userId: userId,
-      bankName: bankName,
-      accountName: accountName,
-    });
-
-    if (!account) {
-      throw new Error(`No account found for user ID ${userId}, bank name ${bankName}, and account name ${accountName}.`);
-    }
-
-    // Check if we need to fetch transactions
-    const now = new Date();
-    const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000);
-    let transactions = account.transactions;
-
-    if (!account.lastTransactionFetch || account.lastTransactionFetch < fourHoursAgo) {
-      console.log(`Fetching transactions for account ${account.accountId}`);
-
-      const accessToken = account.accessToken;
-      if (!accessToken) {
-        throw new Error(`Access token not found for account ${accountName} in bank ${bankName}.`);
-      }
-
-      // Set the date range
-      const endDate = now.toISOString().split('T')[0];
-      const startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().split('T')[0];
-
-      // Fetch transactions from Plaid
-      const transactionsResponse = await plaidClient.transactionsGet({
-        access_token: accessToken,
-        start_date: startDate,
-        end_date: endDate,
-        options: { account_ids: [account.accountId] },
-      });
-
-      transactions = transactionsResponse.data.transactions;
-
-      // Update transactions and timestamp
-      account.transactions = transactions;
-      account.lastTransactionFetch = now;
-      await account.save();
-    } else {
-      console.log(`Using cached transactions for account ${account.accountId}`);
-    }
-
-    return transactions;
-  } catch (error) {
-    console.error(`Error fetching transactions for user ID ${userId}, bank name ${bankName}, account name ${accountName}:`, error);
-    throw new Error('Failed to fetch transactions');
+async function syncTransactions(bankAccount) {
+  const accessToken = bankAccount.accessToken;
+  if (!accessToken) {
+    throw new Error(`No accessToken found for BankAccount ${bankAccount._id}`);
   }
-};
+
+  let cursor = bankAccount.transactionsSyncCursor || null;
+  let hasMore = true;
+
+  while (hasMore) {
+    const syncRequest = {
+      access_token: accessToken,
+      cursor: cursor,
+      count: 100,
+    };
+
+    const syncResponse = await plaidClient.transactionsSync(syncRequest);
+    const {
+      added,
+      modified,
+      removed,
+      next_cursor,
+      has_more
+    } = syncResponse.data;
+
+    // (a) handle 'added'
+    for (const newTx of added) {
+      const existingIndex = bankAccount.transactions.findIndex(
+        (t) => t.transaction_id === newTx.transaction_id
+      );
+      if (existingIndex === -1) {
+        bankAccount.transactions.push(newTx);
+      } else {
+        bankAccount.transactions[existingIndex] = newTx;
+      }
+    }
+
+    // (b) handle 'modified'
+    for (const modTx of modified) {
+      const existingIndex = bankAccount.transactions.findIndex(
+        (t) => t.transaction_id === modTx.transaction_id
+      );
+      if (existingIndex !== -1) {
+        bankAccount.transactions[existingIndex] = modTx;
+      } else {
+        bankAccount.transactions.push(modTx);
+      }
+    }
+
+    // (c) handle 'removed'
+    for (const removedTx of removed) {
+      bankAccount.transactions = bankAccount.transactions.filter(
+        (t) => t.transaction_id !== removedTx
+      );
+    }
+
+    // update cursor
+    cursor = next_cursor;
+    hasMore = has_more;
+  }
+
+  // store final next_cursor, update lastTransactionFetch
+  bankAccount.transactionsSyncCursor = cursor;
+  bankAccount.lastTransactionFetch = new Date();
+  await bankAccount.save();
+}
+
+async function getTransactions(userId, bankName, accountMask) {
+  // 1) Look up the BankAccount doc
+  const account = await BankAccount.findOne({
+    userId: userId,
+    bankName: bankName,
+    mask: accountMask,
+  });
+
+  if (!account) {
+    throw new Error(
+      `No account found for user ID ${userId}, bank name ${bankName}, and mask ${accountMask}.`
+    );
+  }
+
+  // 2) Always perform a full sync via transactions/sync
+  console.log(`Syncing transactions for account ${account.accountId} (no time-based check).`);
+  await syncTransactions(account);
+
+  // 3) Return the local array
+  return account.transactions;
+}
+
+
 
 
 

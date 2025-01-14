@@ -12,6 +12,7 @@ import './styles/CreateRulePage.css';
 import { createRule, getRuleById, updateRule } from '../utils/rule_api'; // Import the createRule function
 //import {Button, Alert} from 'react-bootstrap';
 import { getFactTree,getUserFacts } from '../utils/fact_api';
+import MyNavbar from './components/MyNavbar';
 
 import Swal from 'sweetalert2';
 
@@ -229,10 +230,8 @@ const initialEvent = useMemo(() => {
         limit = Infinity; // Premium has no limit
       } else if (subscriptionProductId === process.env.REACT_APP_NOMI_STANDARD) {
         limit = 4; // Standard subscription limit
-      } else if (subscriptionProductId === process.env.REACT_APP_NOMI_SINGLE) {
-        limit = 1; // Single subscription limit
-      } else {
-        limit = 0; // No subscription
+      }  else {
+        limit = 1; // No subscription
       }
   
       let isActive = true;
@@ -273,6 +272,11 @@ const initialEvent = useMemo(() => {
   };
 
   return (
+    <>
+      <MyNavbar
+      authUser={auth.user}
+    />
+
     <Container className="create-rule-container">
       {errorMessage && <Alert variant="danger">{errorMessage}</Alert>}
       <Accordion defaultActiveKey={[]} alwaysOpen>
@@ -316,6 +320,7 @@ const initialEvent = useMemo(() => {
         </Button>
       </div>
     </Container>
+    </>
   );
 }
 

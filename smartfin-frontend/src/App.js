@@ -16,6 +16,10 @@ import PaymentSuccess from './pages/components/PaymentSuccess';
 import PaymentCancel from './pages/components/PaymentCancel';
 import PricingTable from './pages/components/PricingTable';
 import LogoutPage from './pages/LogoutPage';
+import AppletForm from './pages/components/AppletForm';
+
+
+//gaaaah ga
 
 function App() {
   return (
@@ -34,6 +38,7 @@ function App() {
         <Route path="/payment/cancel" element={<PaymentCancel />} />
         <Route path='/pricing' element={<PricingTable />} />
         <Route path='/logout' element={<LogoutPage />} />
+        <Route path="/applet-form" element={<AppletForm />} />
 
         {/* Additional routes can be added here */}
       </Routes>

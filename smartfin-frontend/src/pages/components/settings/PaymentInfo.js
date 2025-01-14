@@ -14,7 +14,7 @@ const PaymentInfo = () => {
 
   const handleManageSubscription = () => {
     // Redirect the user to the static billing portal link
-    window.location.href = 'https://billing.stripe.com/p/login/test_4gw9AB4FsdAJc80dQQ';
+    window.location.href =  process.env.REACT_APP_STRIPE_BILLING_LINK;
   };
 
   if (!auth.user) {

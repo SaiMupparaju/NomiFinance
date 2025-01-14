@@ -1,0 +1,79 @@
+{
+    "_id": {
+      "$oid": "677849770f9ec6aa940b6f6e"
+    },
+    "creatorId": {
+      "$oid": "6770581a7d8503e8865de799"
+    },
+    "subscriberId": {
+      "$oid": "6770581a7d8503e8865de799"
+    },
+    "rule": {
+      "name": "Leisurely Expenses in the Last Week are Greater than Some Amount",
+      "conditions": {
+        "all": {
+          "conditions": {
+            "all": [
+              {
+                "all": [
+                  {
+                    "fact": "bank_of_america/plaid_checking_0000/expenses/since_1_week",
+                    "operator": "greaterThanInclusive",
+                    "value": {
+                      "fact": "custom_value",
+                      "params": {
+                        "customValue": 0,
+                        "currency": "USD"
+                      }
+                    },
+                    "params": {
+                      "categories": [
+                        "ENTERTAINMENT",
+                        "FOOD_AND_DRINK"
+                      ]
+                    }
+                  }
+                ],
+                "ifOP": "all"
+              }
+            ]
+          },
+          "operator": "AND"
+        }
+      },
+      "event": {
+        "type": "Notify Text",
+        "params": {
+          "emails": [],
+          "phone_numbers": [
+            "+15712532500"
+          ],
+          "message": "message "
+        }
+      },
+      "schedule": {
+        "events": [],
+        "view": "timeGridWeek",
+        "userLocalTimeZone": "America/New_York",
+        "date": null,
+        "dailyTimes": [
+          "2025-01-03T20:30:28.441Z"
+        ],
+        "weeklyTimes": null,
+        "monthlyOptions": null,
+        "customTimes": null,
+        "frequency": "daily",
+        "timeZone": "America/Los_Angeles"
+      }
+    },
+    "isActive": true,
+    "jobId": {
+      "$oid": "677849771b2784243fe2bcfe"
+    },
+    "color": "#ffffff",
+    "isApplet": false,
+    "lastUpdated": {
+      "$date": "2025-01-03T20:32:55.136Z"
+    },
+    "__v": 0
+  }

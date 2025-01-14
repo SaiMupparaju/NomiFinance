@@ -35,6 +35,8 @@ function EditRulePage() {
   });
   const [buttonText, setButtonText] = useState("Create Rule");
 
+  console.log("edit page", userRules)
+
   useEffect(() => {
     // Example of preset values for the event state
     const presetEvent = {
@@ -192,7 +194,7 @@ function EditRulePage() {
       } else if (subscriptionProductId === process.env.REACT_APP_NOMI_SINGLE) {
         limit = 1; // Single subscription limit
       } else {
-        limit = 0; // No subscription
+        limit = 1; // No subscription
       }
   
       let isActive = true;

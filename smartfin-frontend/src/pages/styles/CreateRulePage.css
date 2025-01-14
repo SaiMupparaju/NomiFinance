@@ -1,81 +1,121 @@
+/* Container spans the full width, with some top/bottom padding */
 .create-rule-container {
-  margin-top: 50px;
+  width: 100%;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  padding: 0 2rem; /* Slight horizontal padding for breathing room */
 }
 
-
-.if-button {
-  margin-right: 10px;
-}
-
+/* Conditions area should be flexible and allow wrapping */
 .if-conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* vertical space between condition groups */
   margin-top: 20px;
 }
 
+/* Each condition line can wrap if there’s not enough horizontal space */
 .if-condition {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  gap: 1rem; 
   margin-bottom: 15px;
 }
 
-.if-condition > * {
-  margin-right: 10px;
-  flex-grow: 1;
+/* Make sure selects/inputs have reasonable min width */
+.if-condition select,
+.if-condition input {
+  min-width: 180px;
 }
 
+/* Keep .add-condition-button in normal flow (not absolute) */
 .add-condition-button {
-  position: absolute;
-  right: 20px;
-  bottom: 20px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
+.add-condition-button:hover {
+  background-color: #005bbf;
+  cursor: pointer;
+}
+
+/* Modern accordion style */
 .accordion-button {
-  font-size: 2rem; /* Base font size for headers */
-  font-weight: bold;
+  font-size: 1.125rem;
+  font-weight: 600;
+  background-color: #f8f9fa;
+  border: none;
+  color: #333;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  border-radius: 6px;
+  padding: 1rem;
 }
 
-/* Increase font size when the accordion is collapsed */
-.accordion-button.collapsed {
-  font-size: 2.5rem;
+.accordion-button:not(.collapsed) {
+  background-color: #e9ecef;
+  color: #333;
 }
 
+.accordion-item {
+  border: none;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+}
+
+/* Optional color-coded left borders */
 .accordion-item.iff-section {
-  border: 2px solid #FFD700; /* Gold color for better visibility */
+  border-left: 4px solid #FFD700;
 }
 
 .accordion-item.then-section {
-  border: 2px solid #007BFF; /* Bootstrap primary blue */
+  border-left: 4px solid #007BFF;
 }
 
 .accordion-item.execute-section {
-  border: 2px solid #DC3545; /* Bootstrap danger red */
+  border-left: 4px solid #DC3545;
 }
 
 .accordion-item.name-section {
-  border: 2px solid #28A745; /* Bootstrap success green */
+  border-left: 4px solid #28A745;
 }
 
-/* Optional: Add some padding to the accordion item for better appearance */
-.accordion-item {
-  margin-bottom: 1rem;
-  border-radius: 5px;
-}
-
-/* Adjust the accordion body padding */
 .accordion-body {
-  padding: 1rem 1.5rem;
-}
-
-/* Optional: Enhance the accordion headers */
-.accordion-header .accordion-button {
   background-color: #ffffff;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #dee2e6;
 }
 
-/* Adjusting the border to include the header and body */
-.accordion-item .accordion-header {
-  border-bottom: none;
+.accordion-header {
+  margin-bottom: 0;
+  border-radius: 6px;
 }
 
-.accordion-item .accordion-body {
-  border-top: 1px solid rgba(0, 0, 0, 0.125);
+/* “Create Rule” button */
+.mt-3.text-end {
+  margin-top: 2rem !important;
+  text-align: right;
+}
+
+.mt-3.text-end button {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+  border: none;
+  background-color: #007bff;
+  color: #fff;
+}
+
+.mt-3.text-end button:hover {
+  background-color: #005bbf;
+  cursor: pointer;
 }

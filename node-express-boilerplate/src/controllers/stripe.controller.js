@@ -14,7 +14,7 @@ function mapProductIdToPlan(productId) {
     case process.env.NOMI_STANDARD_ID:
       return 'Nomi Standard'
     case process.env.NOMI_SINGLE_ID:
-      return 'Nomi Single'
+      return 'Nomi Free'
   }
 }
 

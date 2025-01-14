@@ -42,6 +42,20 @@ function IfSection({
     updateCondition(sectionIndex, conditionIndex, attr, value?.fact);
   };
 
+  function usesContainsTransaction(condition) {
+    const factPath = condition.fact || '';
+    const valuePath = condition.value?.fact || '';
+    
+    // We'll see if either path includes “/contains/large_transaction”
+    // or “/contains/large_foreign_transaction”.
+    // This is simplistic: you might want to be more explicit.
+    const hasLargeTransaction = factPath.includes('/contains/large_transaction') || valuePath.includes('/contains/large_transaction');
+    const hasLargeForeignTrans = factPath.includes('/contains/large_foreign_transaction') || valuePath.includes('/contains/large_foreign_transaction');
+  
+    return (hasLargeTransaction || hasLargeForeignTrans);
+  }
+
+
   return (
     <div className="if-section">
       {conditionsArray.length === 0 && (
@@ -76,6 +90,11 @@ function IfSection({
             </Col>
 
             <Col md={2}>
+
+            {usesContainsTransaction(condition) && (
+              <span style={{ marginRight: '8px', fontStyle: 'italic' }}>of value</span>
+            )}
+            
               <Dropdown
                 onSelect={(e) =>
                   updateCondition(

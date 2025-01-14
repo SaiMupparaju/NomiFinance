@@ -15,6 +15,8 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
   const [selectedIncomes, setSelectedIncomes] = useState([]);
   const [lastKeyPressTime, setLastKeyPressTime] = useState(0);
   const [inputDisabled, setInputDisabled] = useState(false);
+  const [showHomeCountry, setShowHomeCountry] = useState(false);
+  const [selectedHomeCountry, setSelectedHomeCountry] = useState('US');
 
   const availableCategories = [
     { label: 'Transfers Out', value: 'TRANSFERS_OUT' },
@@ -41,10 +43,46 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
     { label: 'Unemployment', value: 'INCOME_UNEMPLOYMENT'},
     { label: 'Wages (Including gigs)', value: 'INCOME_WAGES'},
     { label: 'Misc. (Alimony, Social Security, etc.)', value: 'INCOME_OTHER_INCOME'}
-
   ]
 
+  const countryOptions = ['US', 'CA', 'GB', 'AU', 'IN', 'FR', 'DE', 'JP'];
+
+  function filterCascaderOptions(options, prop) {
+    /**
+     * We want to:
+     *  - If prop === 'fact': remove any node whose `value` is 'custom_value'.
+     *  - If prop === 'value': remove any node whose `value` is 'contains' (and their children).
+     *
+     * Because the factTree is hierarchical (Banks -> Accounts -> Balances/Expenses/etc. -> child-nodes),
+     * we'll do a recursive filter to exclude certain `value`s or branches.
+     */
+  
+    return options
+      .map((node) => {
+        // Potentially filter children recursively
+        let filteredChildren = [];
+        if (Array.isArray(node.children) && node.children.length > 0) {
+          filteredChildren = filterCascaderOptions(node.children, prop);
+        }
+        return { ...node, children: filteredChildren };
+      })
+      .filter((node) => {
+        // Exclude 'custom_value' if prop === 'fact'
+        if (prop === 'fact' && node.value === 'custom_value') {
+          return false; // skip
+        }
+  
+        // Exclude 'contains' if prop === 'value'
+        if (prop === 'value' && node.value === 'contains') {
+          return false; // skip
+        }
+  
+        return true; 
+      });
+  }
+
   const currencyOptions = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'INR', 'SGD', 'HKD'];
+  const filteredOptions = filterCascaderOptions(options, prop);
 
   useEffect(() => {
     if (value) {
@@ -76,9 +114,14 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
         setShowCategories(false); // Hide categories if custom value is selected
         setShowCurrencyDropdown(true);
         setSelectedCategories([]); // Clear selected categories
-      } else {
+      }else if (valueArray.includes('contains') && valueArray.includes('large_foreign_transaction')) {
+        setShowHomeCountry(true);
+        setSelectedHomeCountry(params.homeCountry || 'US');
+      }
+      else {
         setShowCategories(false);
         setCustomValue(null);
+        setShowHomeCountry(false);
       }
     }
   }, [value, params]);
@@ -193,6 +236,21 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
     }
   };
 
+  const handleCountryChange = (newVal) => {
+    // 1) update local state so that next render sees newVal
+    console.log(newVal);
+    setSelectedHomeCountry(newVal);
+  
+    // 2) use newVal right here in updateCondition
+    const newParams = { ...params, homeCountry: newVal };
+    if (prop === 'value') {
+      updateCondition(sectionIndex, conditionIndex, `${prop}.params`, newParams);
+    } else {
+      updateCondition(sectionIndex, conditionIndex, 'params', newParams);
+    }
+  };
+
+
 
   const handleConfirm = () => {
     let fact = tempValue.join('/');
@@ -207,6 +265,20 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
       updateCondition(sectionIndex, conditionIndex, prop === 'fact' ? 'params' : `${prop}.params`, { incomes: selectedIncomes });
     } else if (customValue !== null) {
       updateCondition(sectionIndex, conditionIndex, prop === 'fact' ? 'params' : `${prop}.params`, { customValue: customValue, currency: selectedCurrency });
+    } else if (showHomeCountry) {
+
+      if (prop === 'value') {
+        updateCondition(sectionIndex, conditionIndex, `${prop}.params`, {
+          ...params,
+          homeCountry: selectedHomeCountry
+        });
+      } else {
+        updateCondition(sectionIndex, conditionIndex, 'params', {
+          ...params,
+          homeCountry: selectedHomeCountry
+        });
+      }
+      
     } else {
       updateCondition(sectionIndex, conditionIndex, prop === 'fact' ? 'params' : `${prop}.params`, null);
     }
@@ -220,10 +292,12 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
     setShowCategories(false);
   };
 
+  
+
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
       <Cascader
-        options={options}
+        options={filteredOptions}
         value={tempValue.length > 0 ? tempValue : undefined}  // Display the selected value or placeholder
         onChange={onChange}
         placeholder="Please select"
@@ -305,6 +379,19 @@ const BankCascader = ({ value, params = {}, updateCondition, sectionIndex, condi
               ))}
             </Select>
           </>
+      )}
+
+      {showHomeCountry && (
+        <Select
+          value={selectedHomeCountry}
+          onChange={handleCountryChange}
+          style={{ flex: 1, minWidth: '120px' }}
+          placeholder="Select your home country"
+        >
+          {countryOptions.map((code) => (
+            <Option key={code} value={code}>{code}</Option>
+          ))}
+        </Select>
       )}
 
       {isConfirmVisible && (

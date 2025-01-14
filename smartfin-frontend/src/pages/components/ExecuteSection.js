@@ -14,6 +14,13 @@ const timeZoneOptions = [
   // Add more time zones as necessary
 ];
 
+function safeParseDate(dateOrString) {
+  if (!dateOrString) return null;              // e.g. null/undefined
+  const d = new Date(dateOrString);
+  return isNaN(d.getTime()) ? null : d;        // If invalid date -> null
+}
+
+
 function parseDate(dateString) {
   const date = dateString instanceof Date ? dateString : new Date(dateString);
   return date;
@@ -37,10 +44,9 @@ function ExecuteSection({ schedule = {}, setSchedule, isNewRule }) {
   const [timeZone, setTimeZone] = useState(schedule.timeZone || 'UTC'); // Add timezone state
 
   const [dailyTimes, setDailyTimes] = useState(
-    schedule.dailyTimes ? schedule.dailyTimes.map(timeObj => ({
-      ...timeObj,
-      time: parseDate(timeObj.time)
-    })) : []
+    Array.isArray(schedule.dailyTimes)
+      ? schedule.dailyTimes.map((t) => safeParseDate(t) || new Date())
+      : []
   );
 
   useEffect(() => {
@@ -49,18 +55,22 @@ function ExecuteSection({ schedule = {}, setSchedule, isNewRule }) {
   }, [setSchedule]);
 
   const [weeklyTimes, setWeeklyTimes] = useState(
-    schedule.weeklyTimes ? schedule.weeklyTimes.map(timeObj => ({
-      ...timeObj,
-      time: parseDate(timeObj.time)
-    })) : []
+    Array.isArray(schedule.weeklyTimes)
+      ? schedule.weeklyTimes.map((wt) => ({
+          day: wt.day ?? 0,
+          time: safeParseDate(wt.time) || new Date(),
+        }))
+      : []
   );
 
   const [monthlyOptions, setMonthlyOptions] = useState(schedule.monthlyOptions || { firstOfMonth: false, lastOfMonth: false });
   const [customTimes, setCustomTimes] = useState(
-    schedule.customTimes ? schedule.customTimes.map(timeObj => ({
-      date: parseDate(timeObj.date),
-      time: parseDate(timeObj.time)
-    })) : [{ date: new Date(), time: new Date() }]
+    Array.isArray(schedule.customTimes)
+      ? schedule.customTimes.map((c) => ({
+          date: safeParseDate(c.date) || new Date(),
+          time: safeParseDate(c.time) || new Date(),
+        }))
+      : []
   );
 
   useEffect(() => {

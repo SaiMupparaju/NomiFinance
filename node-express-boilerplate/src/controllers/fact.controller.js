@@ -1,5 +1,6 @@
 // controllers/factController.js
 const { fetchAccounts, getTransactions } = require('./plaid.controller'); // Assuming this service exists to fetch bank accounts
+const Rule = require('../models/Rule');
 const BankAccount = require('../models/bankAccount.model');
 const accountPropertyMapping = {
   balance: 'balances.current',
@@ -70,6 +71,12 @@ exports.getStartDate = (timeframe) => {
       return moment().subtract(1, 'year').startOf('day');
     case 'since_ytd':
       return moment().startOf('year');
+    case 'since_month_to_date':
+      return moment().startOf('month');
+    case 'since_week_to_date':
+      return moment().startOf('week');
+    case 'since_last_day':
+      return moment().subtract(1, 'day').startOf('day');
     default:
       throw new Error(`Invalid timeframe: ${timeframe}`);
   }
@@ -203,19 +210,110 @@ exports.getFactValue = async (userId, factString, params) => {
     const accountName = exports.toProperCase(factAccountString.slice(0, -5)); // Account name is the part before the last 5 characters
     const accountMask = factAccountString.slice(-4); // Last 4 characters represent the mask
 
+
+
+
     // Fetch the account from the database based on bank name, account name, and mask
     //console.log("account query:", userId, bankName, accountName, accountMask);
     const account = await BankAccount.findOne({
       userId: userId,
-      bankName: bankName,
-      accountName: accountName,
+      bankName: { $regex: new RegExp(`^${bankName}$`, 'i') },
+      accountName: { $regex: new RegExp(`^${accountName}$`, 'i') },
       mask: accountMask,
     });
+
     //console.log("fetched account", account);
 
     if (!account) {
       throw new Error(`Account not found for user ID ${userId}, bank name ${bankName}, account name ${accountName} with mask {${accountMask}}.`);
     }
+
+    if (property === 'contains' && subProperty === 'large_transaction') {
+      const cutoffDateTime = moment().subtract(32, 'hours');
+    
+      const accountMask = factAccountString.slice(-4);
+    
+      const allTx = await getTransactions(userId, bankName, accountMask);
+    
+      const txInRange = allTx.filter((tx) => {
+        const txMoment = moment(tx.date, 'YYYY-MM-DD');
+        return txMoment.isSameOrAfter(cutoffDateTime);
+      });
+    
+      let largestTransaction = 0;
+      for (const tx of txInRange) {
+        const amt = Math.abs(tx.amount);
+        if (amt > largestTransaction) {
+          largestTransaction = amt;
+        }
+      }
+    
+      console.log(`largest transaction found in last 32 hours: ${largestTransaction}`);
+      return largestTransaction;
+    }
+    
+    if (property === 'contains' && subProperty === 'large_foreign_transaction') {
+    // 1) Cutoff is 32 hours ago
+    const cutoffDateTime = moment().subtract(32, 'hours');
+
+    // 2) Identify the account from the fact string
+    const accountMask = factAccountString.slice(-4);
+
+    // 3) Fetch or sync all transactions from the local DB/cached
+    const allTx = await getTransactions(userId, bankName, accountMask);
+
+    // 4) Filter to only transactions within the last 32 hours
+    const txInRange = allTx.filter((tx) => {
+      const txMoment = moment(tx.date, 'YYYY-MM-DD');
+      return txMoment.isSameOrAfter(cutoffDateTime);
+    });
+
+    // 5) Additional step: detect if transaction is “foreign”
+    // We'll define a helper function:
+    const isForeignTransaction = (tx, bankAccount) => {
+      // (a) currency mismatch
+      const currencyMismatch =
+        tx.iso_currency_code &&
+        bankAccount.balances.iso_currency_code &&
+        tx.iso_currency_code !== bankAccount.balances.iso_currency_code;
+
+      // (b) location mismatch (if location.country is provided and not "US")
+      const locationMismatch =
+        tx.location &&
+        tx.location.country &&
+        tx.location.country !== 'US';  // or whichever “home” country you expect
+
+      return (currencyMismatch || locationMismatch);
+    };
+
+    // 5a) We must also fetch the BankAccount doc to check account.balances.iso_currency_code
+    // You can do this once up front:
+
+    const bankAccount = await BankAccount.findOne({
+      userId: userId,
+      bankName: { $regex: new RegExp(`^${bankName}$`, 'i') },
+      mask: accountMask,
+    });
+
+    // 6) Filter further to only foreign transactions
+    const foreignTxs = txInRange.filter((tx) => {
+      return isForeignTransaction(tx, bankAccount);
+    });
+
+    // 7) Find the largest absolute amount among these foreign transactions
+    let largestForeignTransaction = 0;
+    for (const tx of foreignTxs) {
+      const amt = Math.abs(tx.amount);
+      if (amt > largestForeignTransaction) {
+        largestForeignTransaction = amt;
+      }
+    }
+
+    console.log(`largest foreign transaction found in last 32 hours: ${largestForeignTransaction}`);
+    return largestForeignTransaction;
+  }
+
+    
 
     // If the property is "balances", return the corresponding balance value
     if (property === 'balances') {
@@ -234,6 +332,7 @@ exports.getFactValue = async (userId, factString, params) => {
 
       const expenseTimeframe = subProperty; // This could be 'since_last_month', 'since_1_week', etc.
       const totalExpenses = await exports.calculateExpenses(account, params, expenseTimeframe);
+      console.log("total expneses on the item", totalExpenses); 
       return totalExpenses;
     }
 
@@ -351,11 +450,13 @@ const getFactTree = (bankAccounts) => {
 
   // Define timing options, each leading to the same set of categories
   const timings = [
-    { label: 'Last Rule Check', value: 'last_rule_check'},
+    { label: 'In Last Day', value: 'since_last_day'},
     { label: 'Since 1 Week', value: 'since_1_week'},
     { label: 'Since 1 Month', value: 'since_1_month'},
     { label: 'Since 1 Year', value: 'since_1_year'},
     { label: 'Since Y2D', value: 'since_ytd'},
+    { label: 'Month to Date', value: 'since_month_to_date'},
+    { label: 'Week to Date', value: 'since_week_to_date'},
   ];
 
   const incomes = [
@@ -389,7 +490,15 @@ const getFactTree = (bankAccounts) => {
                 { label: 'Available', value: 'available' },
               ]},
               { label: 'Expenses', value: 'expenses', children: timings },
-              { label: 'Income', value: 'income', children: incomes}
+              { label: 'Income', value: 'income', children: incomes},
+              {
+                label: 'Contains',
+                value: 'contains',
+                children: [
+                  { label: 'Large Transaction',         value: 'large_transaction' },
+                  { label: 'Large Foreign Transaction', value: 'large_foreign_transaction' },
+                ]
+              }
             ]
           };
 

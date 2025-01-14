@@ -2,4 +2,3 @@ REACT_APP_BACKEND_API_URL = http://localhost:3001
 MONGO_CONNECTION_STRING = mongodb://127.0.0.1:27017/node-boilerplate
 TASKER_API_KEY = 945c1bbf30759babfc9ea41e5f92918c95ba54298afc49afc36b3639867029f9
 #MONGO_CONNECTION_STRING = mongodb+srv://nomifinance12:ShanghaiChilliCrab3.14@nomi-serverlessinstance.y0jbxob.mongodb.net/
-#env = PROD

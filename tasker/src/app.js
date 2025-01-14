@@ -36,6 +36,7 @@ const authenticateRequest = (req, res, next) => {
   return res.status(401).json({ message: 'Unauthorized' });
 };
 
+
 // Apply the authentication middleware to all routes
 app.use(authenticateRequest);
 
@@ -44,7 +45,7 @@ app.use(bodyParser.json());
 
 // Use the scheduling routes
 app.use('/', scheduleRoutes);
-
+console.log("Version 8");
 agenda.start().then(() => {
   console.log('Agenda started!');
 });
